@@ -6,7 +6,7 @@
 
 Sam-PPT-Bain 能把一份结构化的 `deck.json` 按 参考模板 模板风格生成可编辑 PPTX，含 20 种版式、每次运行独立目录、自动检查 + PowerPoint 渲染自检 + 像素级回归。用 20 页新能源汽车测试大纲能完整跑通（自动检查 0 问题，仅说明没有越界/溢出等机械错误）。
 
-**效果上，用户只确认了 3 页**：咨询版的 P4（chart_phases）、P13（funnel）、P17（hub）。**其余 17 页是精修卡片风格，用户明确表示未达预期**，不能当作标准参考，也不要据此推断"用户满意"。
+**效果上，用户确认了 6 页**：咨询版第一批 P4（chart_phases）、P13（funnel）、P17（hub），第二批 P5（dual_charts）、P7（versus）、P10（matrix）。**其余 14 页是精修卡片风格，用户明确表示未达预期**，不能当作标准参考，也不要据此推断"用户满意"。
 
 **还没做到的**：17 种版式仍是"精修卡片风格"，只有 3 种是用户确认过的"咨询风格"；从大纲到 deck.json 这一步靠 Claude 手写，没有程序辅助。详见第 7 节待办。
 
@@ -81,7 +81,7 @@ Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`。
 2. **自动检查**：`qa.md` 必须 0 问题；PowerPoint 渲染失败 = 文件损坏。`qa.py` 已用故意出错的样例验证过能抓住越界、溢出、过宽。
 3. **视觉检查**：按 `references/qa-checklist.md`。用户最在意：对齐（同行中线、同列边缘）、不越界、信息密度、不重复、深浅对比。
 4. **回归**：`regress.py` 对比 `tests/baseline/`，按 `STATUS.json` 区分两类页面：
-   - **approved（已确认）**：目前只有 consulting-samples 的 1–3 页和 nev-report 的第 4、13、17 页。它们一旦变化，回归就失败。必须先把渲染图给用户看，用户确认后才能 `--update-approved <deck>:<页码>`。
+   - **approved（已确认）**：consulting-samples 与 consulting-samples-2 的 1–3 页，nev-report 的第 4、5、7、10、13、17 页。它们一旦变化，回归就失败。必须先把渲染图给用户看，用户确认后才能 `--update-approved <deck>:<页码>`。
    - **provisional（临时快照）**：其余 17 页。只用来发现"意外"变化，效果本身未被认可，升级时本来就该变。变化会列出来供查看，不算失败；确认是有意的改动后用 `--update` 刷新快照。
    - 用户确认了新页面的效果后，用 `--approve <deck>:<页码>` 把它转为 approved，并在 STATUS.json 的说明里写上确认日期。
    - **绝不能自己把页面标成 approved**，只有用户说"可以了"才行。
@@ -107,7 +107,7 @@ Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`。
 
 ## 7. 待办与已知问题（建议的下一步顺序）
 
-1. **把其余版式升级成咨询风格**（最大的一项）。2026-10-21 第二批：`dual_charts`、`versus`、`matrix` 已改为咨询构图（代码在 `layouts/consult.py`，样张 `examples/consulting-samples-2.json`，对应 nev-report 第 5、7、10 页），第 1 轮评审意见（P5 栏宽不均/无分隔/图表不够精致、底部"注"与页脚冲突；P7 栏和行不明显）已改，第 2 轮意见（P7 去掉单元格底色改分割线；P5 栏宽按内容分配、保留细竖线）已改，**等待第 3 轮评审**——用户确认后 `--approve consulting-samples-2:1,2,3;nev-report:5,7,10`，否则按反馈修改。之后再铺开其余 14 种（cover、contents 等开篇页可能不需要论点条，先问用户）。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`。
+1. **把其余版式升级成咨询风格**（最大的一项）。2026-10-21 第二批 `dual_charts`、`versus`、`matrix` 经三轮评审**已确认并 approve**（样张 `examples/consulting-samples-2.json`，对应 nev-report 第 5、7、10 页）。三轮意见已沉淀进 `design-rules.md` 第二节（不加整页"注"、栏宽按内容分配 + 细竖线、对比页用分割线而非底色让行可见）。**用户要求暂停铺开其余 14 种**，等用户发话再继续；继续时仍先做 2–3 张样张评审（cover、contents 等开篇页可能不需要论点条，先问用户）。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`。
 2. **用一份新的大纲做端到端测试**（不同行业、不同页数），检验 SKILL.md 的规划指引和各版式容量上限是否合理；容量不够或字段不顺手就改版式。
 3. **文字溢出检查是估算**（按字宽估行数）。可考虑用 PowerPoint COM 读取实际文本框边界做精确检查。
 4. **重叠检查**还没有（比如标注气泡压住数据标签只能靠看图）。

@@ -11,12 +11,20 @@
   "nev-report": {
     "approved": [
       4,
+      5,
+      7,
+      10,
       13,
       17
     ],
-    "approved_note": "与 consulting-samples 相同的三页；其余 17 页为精修卡片风格，用户反馈未达预期，待升级为咨询风格"
+    "approved_note": "第 4、13、17 页（咨询版第一批，2026-10-21 确认）；第 5、7、10 页（dual_charts / versus / matrix 咨询版第二批，2026-10-21 经三轮评审确认）。其余 14 页为精修卡片风格，用户反馈未达预期，待升级"
   },
   "consulting-samples-2": {
-    "approved": []
+    "approved": [
+      1,
+      2,
+      3
+    ],
+    "approved_note": "咨询版第二批样张 P5 / P7 / P10（dual_charts / versus / matrix），2026-10-21 经三轮评审确认"
   }
 }
