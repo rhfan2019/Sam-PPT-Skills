@@ -57,12 +57,12 @@ def evidence(D, x, y, w, spec):
         mx = max(r["value"] for r in rows)
         lw = 0.98
         bw = w - lw - 0.45
-        step = min(0.115, 0.46 / len(rows))
+        step = min(0.105, 0.42 / len(rows))
         for k, r in enumerate(rows):
             yy = y - 0.03 + k * step
             c = {"red": RED, "navy": NAVY, "mid": NAVY_M}[r.get("tone", "navy")]
             D.text(x, yy - 0.04, lw - 0.05, 0.18, r["label"], size=7.5, color=GREY, align="r")
-            D.rect(x + lw, yy, max(bw * r["value"] / mx, 0.06), 0.1, fill=c)
+            D.rect(x + lw, yy, max(bw * r["value"] / mx, 0.06), 0.09, fill=c)
             D.text(x + lw + bw * r["value"] / mx + 0.04, yy - 0.05, 0.4, 0.18, f'{r["value"]:g}', size=7.5, color=c, face=B)
 
 
@@ -289,8 +289,8 @@ def hub(D, s):
                 tag(D, 9.45, y + 0.48, 0.95, nd.get("group", ""), tone, h=0.26, size=9.5)
                 D.text(9.45 + 1.07, y + 0.48, 2.4, 0.26, nd.get("desc", ""), size=FS_SMALL, color=GREY, anchor="m")
                 dot_line(D, 9.4, y + 0.38, nx + 0.36, ny, col if tone == "red" else NAVY_B, dot_start=True)
-    evidence(D, EL, 5.16, 3.85 - EL, s.get("evidence_left"))
-    evidence(D, 9.45, 5.16, ER - 9.45, s.get("evidence_right"))
+    evidence(D, EL, 5.25, 3.85 - EL, s.get("evidence_left"))
+    evidence(D, 9.45, 5.25, ER - 9.45, s.get("evidence_right"))
     do_strip(D, s.get("strip"))
 
 
