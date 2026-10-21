@@ -1,0 +1,8 @@
+# per-run outputs (generated decks, renders, QA reports)
+**/runs/
+# python / os noise
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+~$*
