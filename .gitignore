@@ -9,3 +9,6 @@ Thumbs.db
 
 # local scratch (legacy builder scripts, sample decks)
 _work/
+
+# ppt-master template review exports (derived evidence)
+Sam-PPT-Bain/template/exports/

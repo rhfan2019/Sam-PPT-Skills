@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+  width="1280" height="720" viewBox="0 0 1280 720"
+  font-family="OPPOSans R, Microsoft YaHei, sans-serif"
+  data-pptx-master="sam_bain_master" data-pptx-master-name="Sam Bain"
+  data-pptx-layout="content_frame" data-pptx-layout-name="标题与自由内容">
+  <rect id="master-background" x="0" y="0" width="1280" height="720" fill="#FFFFFF"
+    data-pptx-layer="master" data-pptx-editable="false"/>
+  <image id="master-hand-mark" x="28.07" y="22.37" width="49.37" height="49.37"
+    href="../images/hold-gesture.svg" preserveAspectRatio="xMidYMid meet"
+    data-pptx-layer="master" data-pptx-editable="false"/>
+  <line id="master-title-rule" x1="35.93" y1="82.51" x2="1244.07" y2="82.51"
+    stroke="#1D4274" stroke-width="3"
+    data-pptx-layer="master" data-pptx-editable="false"/>
+  <line id="master-footer-rule" x1="0" y1="687.01" x2="1280" y2="687.01"
+    stroke="#999999" stroke-width="1.33"
+    data-pptx-layer="master" data-pptx-editable="false"/>
+
+  <g id="title-slot" data-pptx-placeholder="title" data-pptx-bounds="80.7 26 880 56">
+    <text id="title-carrier" data-pptx-carrier="true" x="80.7" y="67.63"
+      fill="#1C4274" font-family="OPPOSans H, Microsoft YaHei, sans-serif"
+      font-size="37.33">{{PAGE_TITLE}}</text>
+  </g>
+  <g id="section-slot" data-pptx-placeholder="body" data-pptx-idx="1"
+    data-pptx-bounds="980 44 264.07 30">
+    <text id="section-carrier" data-pptx-carrier="true" x="1244.07" y="66.52"
+      text-anchor="end" fill="#0E213A" font-family="OPPOSans M, Microsoft YaHei, sans-serif"
+      font-size="14.67">{{SECTION_NAME}}</text>
+  </g>
+  <g id="footer-slot" data-pptx-placeholder="footer" data-pptx-idx="4" data-pptx-bounds="35.93 690 420 15">
+    <text id="footer-carrier" data-pptx-carrier="true" x="35.93" y="701.2"
+      fill="#000000" font-family="OPPOSans L, Microsoft YaHei, sans-serif"
+      font-size="8">{{SOURCE}}</text>
+  </g>
+  <g id="sign-slot" data-pptx-placeholder="body" data-pptx-idx="2"
+    data-pptx-bounds="944.07 690 300 15">
+    <text id="sign-carrier" data-pptx-carrier="true" x="1244.07" y="701.41"
+      text-anchor="end" fill="#595959" font-family="OPPOSans M, Microsoft YaHei, sans-serif"
+      font-size="9.33">{{AUTHOR}}</text>
+  </g>
+</svg>
