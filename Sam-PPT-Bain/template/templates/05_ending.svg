@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+  width="1280" height="720" viewBox="0 0 1280 720"
+  font-family="OPPOSans R, Microsoft YaHei, sans-serif"
+  data-pptx-master="sam_bain_master" data-pptx-master-name="Sam Bain"
+  data-pptx-layout="ending" data-pptx-layout-name="结束页">
+  <defs>
+    <linearGradient id="ending-fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1C4274" stop-opacity="1"/>
+      <stop offset="0.45" stop-color="#1C4274" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#16365F" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+  <rect id="master-background" x="0" y="0" width="1280" height="720" fill="#FFFFFF"
+    data-pptx-layer="master" data-pptx-editable="false"/>
+  <rect id="ending-background" x="0" y="0" width="1280" height="720" fill="#1C4274"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <image id="ending-photo" x="560" y="0" width="720" height="720"
+    href="../images/cover-tower.jpg" preserveAspectRatio="xMidYMid slice"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <rect id="ending-photo-fade" x="560" y="0" width="720" height="720" fill="url(#ending-fade)"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <rect id="ending-accent" x="80" y="286" width="72" height="6" fill="#A23424"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+
+  <g id="title-slot" data-pptx-placeholder="title" data-pptx-bounds="80 304 780 80">
+    <text id="title-carrier" data-pptx-carrier="true" x="80" y="362"
+      fill="#FFFFFF" font-family="OPPOSans H, Microsoft YaHei, sans-serif"
+      font-size="53.33">{{THANK_YOU}}</text>
+  </g>
+  <g id="contact-slot" data-pptx-placeholder="body" data-pptx-idx="1" data-pptx-bounds="80 398 780 40">
+    <text id="contact-carrier" data-pptx-carrier="true" x="80" y="424"
+      fill="#C4D7F1"
+      font-size="21.33">{{CONTACT_INFO}}</text>
+  </g>
+  <g id="author-slot" data-pptx-placeholder="body" data-pptx-idx="2" data-pptx-bounds="80 614 480 28">
+    <text id="author-carrier" data-pptx-carrier="true" x="80" y="634"
+      fill="#FFFFFF" font-family="OPPOSans M, Microsoft YaHei, sans-serif"
+      font-size="16">{{AUTHOR}}</text>
+  </g>
+</svg>

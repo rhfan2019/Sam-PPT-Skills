@@ -1,80 +1,45 @@
 ---
 name: Sam-PPT-Bain
-description: 把用户给的 PPT 大纲按 参考模板 模板的贝恩 / 咨询白皮书风格（海军蓝 + 砖红、OPPOSans、论点条 + 区块标签 + 主图两翼 + 证据框 + 框架条）直接生成可编辑 PPTX。用户给出大纲要求做成 PPT、提到 Sam-PPT-Bain、贝恩风格、参考模板 模板、咨询白皮书风格时使用。每次运行输出到独立的 runs/run-yyyymmdd-hhmmss-fff 目录，并用 PowerPoint 渲染自检。不负责写大纲。
+description: 把用户给的 PPT 大纲按 参考模板 模板的贝恩 / 咨询白皮书风格（海军蓝 + 砖红、OPPOSans、论点条 + 区块标签 + 主图两翼 + 证据框 + 框架条）生成可编辑 PPTX。底层引擎是 ppt-master（Quick Generate + 本 Skill 自带的 Deck/Style 模板），本 Skill 只固化风格、规则和收尾步骤。用户给出大纲要求做成 PPT、提到 Sam-PPT-Bain、贝恩风格、参考模板 模板、咨询白皮书风格时使用。每次运行输出到独立的 runs/run-yyyymmdd-hhmmss-fff 目录，并用 PowerPoint 渲染自检。不负责写大纲。
 ---
 
-# Sam-PPT-Bain：大纲 → 咨询风格可编辑 PPTX
+# Sam-PPT-Bain
 
-本 Skill 把一份现成的大纲排成与 参考模板 模板同一风格的 PPTX。所有元素都是原生对象：文字可改、图表右键"编辑数据"、表格是原生表格、图示是原生形状。
+**薄外壳**：版面生成、检查、导出全部交给 ppt-master；本 Skill 提供三样东西——
 
-风格不靠记忆复刻，而是写死在代码和规则里：
-- `scripts/samppt/tokens.py`：从模板实测的颜色、字号、页面网格（内容左右边界 0.37″ / 12.96″）。
-- `scripts/samppt/components.py`：论点条、区块标签、证据框、框架条、标注气泡等组件，组件内部负责对齐。
-- `scripts/samppt/layouts/`：20 种版式原型，输入是数据，不手调坐标。
-- `assets/kit.pptx`：从模板裁出的母版、页头页脚、图标和图片。
-- `references/design-rules.md`：所有设计规则和踩过的坑。**生成前必读。**
+1. `template/`：ppt-master 的 Deck + Style 模板工作区（6 个原型：封面、目录、章节页、正文页框、正文 + 论点条、结束页），由 参考模板 重建；
+2. `references/`：用户的硬规则、咨询版式做法、经用户确认的样张；
+3. `scripts/sam_bain.py`：固定的运行目录、模板安装、字号校准、导出后的 OPPOSans 中文字体修复、PowerPoint 渲染。
 
-`SKILL_DIR` = 本文件所在目录。
+不要修改 ppt-master 本身；不要再写自己的排版引擎。
 
-## 环境要求
+## 开工前必读（每次）
 
-- Windows + Microsoft PowerPoint（渲染自检用；它是唯一能证明文件"真的能打开"的渲染器）。
-- Python 3.10+，包：`python-pptx`、`lxml`、`Pillow`。缺包时 `pip install python-pptx lxml pillow`。
-- 字体 OPPOSans（H/B/M/R/L）。用户电脑没有时，提醒用户安装，否则 PowerPoint 会替换字体、版面变形。
+1. `references/rules.md` —— 用户的硬规则（不加词、推算值要列出、对齐与边界、只有用户能确认样张）。
+2. `references/page-patterns.md` —— 坐标体系、常用构件的精确尺寸、页型做法。
+3. 看 `references/exemplars/*.png`（三张已验收的 ppt-master 试点页）和 `references/approved/*.png`（用户确认过的六张咨询版样张），再打开与本页页型对应的 `exemplars/*.svg` 作为起点。
 
-## 工作流
-
-### 1. 读规则和版式目录
-先读 `references/design-rules.md` 和 `references/layouts.md`。
-
-### 2. 规划每一页（写 deck.json 之前，先在回复里列出页面计划）
-- 大纲写了"建议呈现"就照做，否则按 `layouts.md` 的"适用场景"选版式。
-- **标题写成结论句**；每页再提炼一句**论点条**（`thesis`，只在咨询版式上显示），与标题互补、不重复。
-- **不替大纲加词**：可以拆句、换行、提炼标签，但不能添加大纲没有的事实或修饰。
-- 推算出来的数字（同比、份额、差值、转化率、均分、倍数）可以用来提高信息密度，但必须由大纲原始数据算出，并在交付时逐条列给用户核实。
-- 每种版式都有**容量上限**（见 `layouts.md`）。超出时拆页或精简，不要硬塞。
-- 同一版式不要连续出现超过两次；图表页和图示页交替。
-
-### 3. 写 deck.json
-放在本次运行目录里（见第 4 步）或任意位置。格式：
-
-```json
-{
-  "meta": {"title": "报告名（也是文件名）", "org": "机构", "sign": "页脚右下署名", "disclaimer": "页脚左下免责声明"},
-  "slides": [ {"layout": "cover", ...}, {"layout": "funnel", "title": "...", "section": "03 消费者洞察", ...} ]
-}
-```
-
-- 每页通用字段：`layout`、`title`（结论标题）、`section`（右上章节标签）、`speaker_notes`（演讲者备注，可选）。
-- 文字里用 `**文字**` 标重点：浅色背景上显示为砖红加粗，深色论点条上显示为浅珊瑚色粗体。每页重点不超过 3 处。
-- 完整示例：`examples/nev-report.json`（20 页，覆盖全部版式）、`examples/consulting-samples.json`（3 张咨询版式样张）。
-
-### 4. 生成（每次运行一个独立目录）
+## 流程
 
 ```bash
-python "$SKILL_DIR/scripts/build.py" deck.json
+python scripts/sam_bain.py new <slug> --source <大纲.md>      # 建运行目录 + 装模板 + 字号校准（输出 PROJECT= 路径）
+python scripts/sam_bain.py photos <PROJECT> car3d.png ...    # 需要时复制素材照片（assets/photos/）
+python scripts/sam_bain.py icons  <PROJECT> chunk-filled/bolt ...  # 同步图标（一套 deck 只用一个图标库）
+python scripts/sam_bain.py check  <PROJECT> --early          # ≥7 页时，写完 P05 后跑一次
+python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → 导出 → 字体修复 → 渲染 → contact.png
 ```
 
-自动创建 `$SKILL_DIR/runs/run-yyyymmdd-hhmmss-fff/`，内含：
-- `deck.json`：本次输入的副本
-- `<title>.pptx`：生成的文件
-- `render/slide-NN.png`：PowerPoint 渲染图
-- `contact.png`：全部页面的缩略总览
-- `qa.md`：自动检查结果
+1. **新建运行**：`new` 会先跑 ppt-master 的 `attribution_guard.py`（非 0 立即停止），在 `runs/run-*/` 下建项目、安装模板、导入大纲、输出字号校准表（每 100 px 可容纳的中/英文字数）。把校准表留在上下文里。
+2. **按 ppt-master Quick Generate 执行**：读 ppt-master 的 `SKILL.md` → `workflows/profiles/quick-generate.md`，按它的 §2–§4 走（规划能力批次、执行核心 `shared-standards-core.md` / `executor-base.md` / `semantic-svg.md` / `preset-shape-vocabulary.md`、结构化页面的 `pptx-structure-interface.md`、图表页的 chart 模块）。模板已由 `new` 安装，跳过"Template branch"中的安装动作，但要读完已安装的两份 spec 和 6 个原型 SVG。
+3. **冻结 Template Application**（固定写法，直接采用）：
+   > 参考式使用。每页都用 6 个原型之一的固定层与 slot，不改页框坐标：大纲封面 → `01_cover`；大纲目录 → `02_toc`（条目 Slide-local）；大纲里的章节分隔页 → `03_chapter`；有"结论/发现"可作为 so-what 的正文页 → `04b_content_thesis`，否则 → `04a_content_frame`；只有大纲写了结束页才用 `05_ending`。正文区的几何全部 Slide-local，按 `page-patterns.md` 的页型做法构图。
+4. **规划页序**：一页大纲 = 一页幻灯片，顺序不变，不增删页。为每页定：页型（见 page-patterns 第三节）、论点条文字（原句）、右上章节标签（取自大纲目录的章节名）、要用到的推算值。
+5. **逐页写 SVG**（主 agent 自己写，按顺序）：从对应的 exemplar 改起；写完每页对照 rules.md 的自检清单。
+6. **收尾**：`finish` 生成 `runs/run-*/<文件名>.pptx`、`renders/slide-NN.png` 和 `contact.png`。**必须逐页看渲染图**（放大看对齐、遮挡、溢出），有问题改 SVG 后重跑 `finish`。
+7. **交付说明**（中文）：成品路径、contact.png；逐条列出推算值（算式）；列出所有对大纲原文的改动（拆句、缩写、省略）；列出与样张的差异和已知限制。**不要自己宣布"通过"**，请用户判断。
 
-修改后重建到同一目录：`python build.py deck.json --run <该目录>`。
+## 运行环境
 
-### 5. 自检（必做，直到干净）
-1. 看 `qa.md`：越界、文字溢出、字号过小、图表 XML 缺陷，**必须清零**。
-2. 渲染失败（PowerPoint 打不开）= 文件损坏，必须修好再交付；格式校验通过不代表 PowerPoint 能打开。
-3. 先看 `contact.png` 整体节奏，再逐页放大看 `render/`，按 `references/qa-checklist.md` 检查。
-4. 问题优先改 deck.json（精简文字、拆页、换版式）；只有版式本身有缺陷时才改代码，改完要用 `examples/` 回归。
-
-### 6. 交付
-给出 PPTX 路径和运行目录，说明页数、用了哪些版式，并**列出所有推算数字**让用户核实。
-
-## 扩展与维护
-
-- 新增版式：在 `scripts/samppt/layouts/` 的模块里写函数并加入该模块的 `LAYOUTS`，只用 `tokens` 常量和 `components` 组件；坐标以 `EL/ER/CW` 和 `cols()` 推算，不写散落的边距数字。然后在 `references/layouts.md` 补一节，在 `examples/` 加一页，跑一次回归。
-- 回归：改动组件或版式后运行 `python scripts/regress.py`。用户确认过的页面（`tests/baseline/STATUS.json` 中的 approved）一旦变化就失败，必须给用户看并得到确认后才能 `--update-approved`；其余页面只是临时快照，变化用 `--update` 刷新。只有用户确认了效果，才能用 `--approve` 把页面转为 approved。
-- 换模板素材：`python scripts/make_kit.py <参考模板> assets/kit.pptx`（图标、图片清单在脚本顶部）。
+- Windows + PowerPoint（渲染）+ OPPOSans 字体；Python 3.12（命令用 `python`，不是 `python3`）。
+- ppt-master 插件位置自动查找（`~/.claude/plugins/cache/ppt-master/...`），可用环境变量 `PPT_MASTER_DIR` 指定。
+- Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`；Windows 长路径会让 Python 起不来，临时文件放短路径。

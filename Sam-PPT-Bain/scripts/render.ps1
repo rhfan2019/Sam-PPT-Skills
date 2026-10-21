@@ -1,22 +1,28 @@
+# Export every slide of a deck to PNG with real PowerPoint (the rendering the user sees).
+# Usage: powershell -ExecutionPolicy Bypass -File render.ps1 <deck.pptx> <out_dir> [width]
 param(
     [Parameter(Mandatory = $true)][string]$Deck,
     [Parameter(Mandatory = $true)][string]$OutDir,
-    [int]$Width = 1920,
-    [int]$Height = 1080
+    [int]$Width = 1600
 )
-# Render every slide with the real PowerPoint (the only renderer that proves the file opens and shows fonts right).
 $ErrorActionPreference = "Stop"
+$deckPath = (Resolve-Path $Deck).Path
 New-Item -ItemType Directory -Force $OutDir | Out-Null
-$pp = New-Object -ComObject PowerPoint.Application
-$p = $pp.Presentations.Open((Resolve-Path $Deck).Path, $true, $false, $false)
+$outPath = (Resolve-Path $OutDir).Path
+
+$app = New-Object -ComObject PowerPoint.Application
 try {
-    $i = 1
-    foreach ($s in $p.Slides) {
-        $s.Export((Join-Path (Resolve-Path $OutDir).Path ("slide-{0:D2}.png" -f $i)), "PNG", $Width, $Height)
-        $i++
+    # ReadOnly, Untitled, WithWindow=false
+    $pres = $app.Presentations.Open($deckPath, $true, $true, $false)
+    $height = [int]($Width * $pres.PageSetup.SlideHeight / $pres.PageSetup.SlideWidth)
+    foreach ($slide in $pres.Slides) {
+        $name = "slide-{0:D2}.png" -f $slide.SlideIndex
+        $slide.Export((Join-Path $outPath $name), "PNG", $Width, $height)
     }
-    "rendered $($i - 1)"
+    Write-Output ("rendered {0} slide(s) -> {1}" -f $pres.Slides.Count, $outPath)
+    $pres.Close()
 }
 finally {
-    $p.Close()
+    if ($app.Presentations.Count -eq 0) { $app.Quit() }
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($app) | Out-Null
 }

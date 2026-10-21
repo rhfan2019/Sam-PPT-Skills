@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+  width="1280" height="720" viewBox="0 0 1280 720"
+  font-family="OPPOSans R, Microsoft YaHei, sans-serif"
+  data-pptx-master="sam_bain_master" data-pptx-master-name="Sam Bain"
+  data-pptx-layout="cover" data-pptx-layout-name="封面">
+  <defs>
+    <linearGradient id="cover-fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1C4274" stop-opacity="1"/>
+      <stop offset="0.45" stop-color="#1C4274" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#16365F" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+  <rect id="master-background" x="0" y="0" width="1280" height="720" fill="#FFFFFF"
+    data-pptx-layer="master" data-pptx-editable="false"/>
+  <rect id="cover-background" x="0" y="0" width="1280" height="720" fill="#1C4274"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <image id="cover-photo" x="560" y="0" width="720" height="720"
+    href="../images/cover-tower.jpg" preserveAspectRatio="xMidYMid slice"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <rect id="cover-photo-fade" x="560" y="0" width="720" height="720" fill="url(#cover-fade)"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <rect id="cover-accent" x="80" y="246" width="72" height="6" fill="#A23424"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+  <line id="cover-base-rule" x1="80" y1="600" x2="560" y2="600"
+    stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"
+    data-pptx-layer="layout" data-pptx-editable="false"/>
+
+  <g id="tag-slot" data-pptx-placeholder="body" data-pptx-idx="1" data-pptx-bounds="80 196 640 36">
+    <text id="tag-carrier" data-pptx-carrier="true" x="80" y="222"
+      fill="#F4D1CC" font-family="OPPOSans M, Microsoft YaHei, sans-serif"
+      font-size="18.67">{{COVER_TAG}}</text>
+  </g>
+  <g id="title-slot" data-pptx-placeholder="title" data-pptx-bounds="80 268 780 136">
+    <text id="title-carrier" data-pptx-carrier="true" x="80" y="320"
+      fill="#FFFFFF" font-family="OPPOSans H, Microsoft YaHei, sans-serif"
+      font-size="48">{{TITLE}}</text>
+  </g>
+  <g id="subtitle-slot" data-pptx-placeholder="subtitle" data-pptx-bounds="80 424 780 40">
+    <text id="subtitle-carrier" data-pptx-carrier="true" x="80" y="452"
+      fill="#C4D7F1"
+      font-size="21.33">{{SUBTITLE}}</text>
+  </g>
+  <g id="author-slot" data-pptx-placeholder="body" data-pptx-idx="3" data-pptx-bounds="80 614 480 28">
+    <text id="author-carrier" data-pptx-carrier="true" x="80" y="634"
+      fill="#FFFFFF" font-family="OPPOSans M, Microsoft YaHei, sans-serif"
+      font-size="16">{{AUTHOR}}</text>
+  </g>
+  <g id="date-slot" data-pptx-placeholder="date" data-pptx-bounds="80 646 480 26">
+    <text id="date-carrier" data-pptx-carrier="true" x="80" y="664"
+      fill="#C4D7F1" font-family="OPPOSans R, Microsoft YaHei, sans-serif"
+      font-size="14.67">{{DATE}}</text>
+  </g>
+</svg>
