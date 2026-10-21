@@ -1,6 +1,6 @@
 # Sam-PPT-Bain 交接文档
 
-> 2026-10-21 重写。新会话先读本文，再读 `SKILL.md`、`references/rules.md`、`references/page-patterns.md`。
+> 2026-10-21 重写，同日补充第 5 节（边测边改）。新会话先读本文，再读 `SKILL.md`、`references/rules.md`、`references/page-patterns.md`。
 
 ## 1. 现状
 
@@ -51,7 +51,47 @@ Sam-PPT-Bain/
 - 图标来自 ppt-master 图标库（一套 deck 一个家族，推荐 `chunk-filled`），与 参考模板 的原图标不同。
 - 论点条高度沿用 参考模板（61.26 px，26.67 px 字）；超长原句按 rules.md 一.5 处理。
 
-## 5. 待办
+## 5. 下一阶段：边测边改（2026-10-21 起，在新会话进行）
 
-1. 用 20 页新能源大纲完整跑一遍（第二阶段），请用户逐页判断；用户确认的页面放进 `examples/nev-case/`（案例页不进 `references/`，避免把案例内容当成风格）。
-2. 再用一份**不同行业**的大纲做端到端测试，检验 page-patterns 的通用性。
+用户要求：**测试必须通过 Sam-PPT-Bain 技能本身进行**，不能绕过技能另做。
+
+### 5.1 每一轮的做法
+
+1. **调用技能**：用户说"用 Sam-PPT-Bain 做……"或输入 `/Sam-PPT-Bain` 时，先用 Skill 工具调用 `Sam-PPT-Bain`，再严格按 SKILL.md 走：`sam_bain.py new` → 按 ppt-master Quick Generate 写 SVG → `check` → `finish`。
+2. **小批量**：每轮 3–5 页，以免上下文过长被压缩。用户看过、修好后再扩大页数。
+3. **交付**：给出 `contact.png` 和逐页渲染图，按 SKILL.md 第 7 步写交付说明。**不要自己宣布通过。**
+4. **改技能，不改成品**：用户指出问题后，改对应的技能文件，不在本次 `runs/` 成品里手工修补。
+   - 页型、构件、坐标 → `references/page-patterns.md`
+   - 用户硬规则、自检清单 → `references/rules.md`
+   - 流程、命令 → `SKILL.md`、`scripts/sam_bain.py`
+   - 模板原型 → `template/`
+     - 改完必须重跑 `svg_quality_checker.py templates --template-mode --canonical-authoring --format ppt169` 和 `template_preview_pptx.py`。
+     - 已确认的 4 个原型，改动前要先问用户。
+5. **提交**：改完后 `git commit` + `git push`。
+6. **复测**：重新调用技能，跑出新的 `runs/run-*`，与上一轮对比。
+7. **记录基线**：用户说"可以了"的案例页，放进 `examples/<案例>/`，并在本文第 1 节登记。
+
+技能目录是指向本仓库的目录链接。正文、规则、模板改动后，**下一次调用就生效**。但 SKILL.md 头部的 `description`（触发描述）是会话启动时加载的，改了它要新开会话才生效。
+
+### 5.2 测试顺序
+
+1. 新能源大纲 `examples/nev-case/outline.md`：先做前 5 页，再逐批做完 20 页，请用户逐页判断。
+2. 再用一份**不同行业**的大纲端到端测试，检验 page-patterns 是否通用。确认 `references/`、`assets/` 里没有混进案例内容。
+
+### 5.3 已踩过的坑
+
+- **Python 启动**：用 `python`，不要用 `python3`（WindowsApps 占位程序）。
+  - 很长的 Windows 路径（例如会话 scratchpad）会让 Python 起不来，临时文件放 `D:\Workspace\...` 下的短路径。
+  - Bash 里输出中文时加 `PYTHONIOENCODING=utf8`。
+- **PowerPoint 锁文件**：渲染时 PowerPoint 会占用文件，`runs/` 里个别文件可能删不掉。关掉 PowerPoint 再删，或者不管它（已 gitignore）。
+- **结构化模板约束**：
+  - 同一 master 下，每个 SVG 的 master 原子必须完全一致，所以 master 只放背景，页框原子放在 layout 层。
+  - 每个 layout 内的 placeholder idx 必须唯一。
+  - slot 的文字放不下就要扩 bounds 或减字号，checker 会报溢出比例。
+- **图标**：`steering` 等名字不在 ppt-master 图标库里，用前先查。
+- **范围**：用户说"打包"时只做模板和规则，不要顺手跑整套案例。
+- **未使用的运行目录**：`runs/run-20261021-072053-091` 是中途停掉的整套新能源运行，没有用到，可以删。
+
+### 5.4 新会话开场可直接粘贴
+
+> 先读 `D:\Workspace\Sam-PPT-Skills\Sam-PPT-Bain\HANDOVER.md`。然后调用 Sam-PPT-Bain 技能，把 `examples/nev-case/outline.md` 的前 5 页做成 PPT。我会一边看一边提修改意见，你改技能文件后再用技能复测。
