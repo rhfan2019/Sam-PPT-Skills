@@ -293,7 +293,11 @@ class Deck:
             s = part.blob.decode("utf8")
             s = re.sub(r"#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b", "#" + color, s)
             s = s.replace("<svg ", f'<svg fill="#{color}" ', 1)
-            s = re.sub(r'\sclass="MsftOfcThm_[^"]*"', "", s)     # else PowerPoint re-themes the paths
+            # PowerPoint re-applies theme / "responsive" colours from MsftOfc* classes: drop them all
+            s = re.sub(r'\sclass="MsftOfc[^"]*"', "", s)
+            # some template icons are drawn semi-transparent (e.g. fill-opacity 0.2): a recoloured icon is always solid
+            s = re.sub(r'(fill-opacity|stroke-opacity|opacity)="[0-9.]+"', r'\1="1"', s)
+            s = re.sub(r"(fill-opacity|stroke-opacity|opacity)\s*:\s*[0-9.]+", r"\1:1", s)
             blob, ext = s.encode("utf8"), "svg"
         else:
             im = Image.open(io.BytesIO(part.blob)).convert("RGBA")
