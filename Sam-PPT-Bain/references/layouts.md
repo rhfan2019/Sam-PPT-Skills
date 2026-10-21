@@ -32,26 +32,24 @@
 - `nodes` 2–6：`{name(≤ 8 字), metric(≤ 5 字), group(标签 ≤ 4 字), desc(≤ 14 字), icon, tone}`
 - `evidence_left / evidence_right`：`{type: split_bar|bars|kpis, title, ...}`
 
-### dual_charts — 年度结构 + 月度走势 + 增长拆解（咨询构图，样张待确认）
-左：堆积柱 + 段间虚线（series lines）+ 末端直接标注系列名 + 份额胶囊行；中：堆积面积 + 末端标注 + 增幅胶囊；右：证据列（3 个指标框 + 增量拆分条）；底部注释线。
-- `zones[左, 中, 右]`；`left / right`：`{title, type: stacked_column|stacked_area, categories(左 ≤ 6，右 ≤ 12), series{名: 值[]}(≤ 3 个系列), callout{at, text}}`
-- `left.pill_row{label, values, suffix, hot}`；`right.end_tags[每个系列一个 ≤ 5 字]`、`right.end_caption`
-- `evidence{kpi_title, kpis ≤ 3 {value, unit, label(≤ 14 字), tone}, split{title, parts[2]{label, value(%), note}, caption}}`
-- `note`：页底注释（推算口径写在这里）
+### dual_charts — 三等栏：年度结构 | 月度走势 | 增长拆解（咨询构图，样张待确认）
+三栏等宽（`cols(3, 0.4)`），栏间细竖线分隔，区块标签与栏同宽。左：堆积柱 + 段间虚线 + 最新年份浅红底带 + 末端直接标注 + 份额胶囊行；中：堆积面积（白色接缝）+ 末月虚线 + 末端标注与增幅胶囊；右：3 个指标框 + 增量拆分条。三栏底部各有一行微型说明，共用同一条基线。
+- `zones[左, 中, 右]`；`left / right`：`{title, type: stacked_column|stacked_area, categories(左 ≤ 6，右 ≤ 9), series{名: 值[]}(≤ 3 个系列), callout{at, text(≤ 10 字)}, caption(≤ 24 字)}`
+- `left.pill_row{label(≤ 4 字), values, suffix, hot}`；`right.end_tags[每个系列一个 ≤ 5 字]`
+- `evidence{kpi_title, kpis ≤ 3 {value, unit, label(≤ 14 字), tone}, split{title, parts[2]{label, value(%), note}, caption}, caption}`
 
-### versus — 镜像两翼 + 中央指标对决（咨询构图，样张待确认）
-VS 徽章压在区块标签行；两翼：图标圆 + 路线名 → 优势 / 劣势（无卡片条目，带指向中央指标行号的编号圈）→ 车图；中央：每行"编号 + 指标名"，两侧条形，占优一方实色渐变 + 粗体数值，另一方浅色；底部框架条。
-- `zones[左, 右]`（默认取 `claim`），`sides` 2：`{name, tone, icon, photo, photo_w, pros[2], cons[2]}`；条目可写字符串或 `{text(≤ 14 字), ref(指标行号)}`
-- `metrics{title, rows ≤ 5 {label(≤ 10 字), a, b, better: low|high}, note?}`（占优项数自动算）
+### versus — 三栏行对齐：左翼 | 指标对决 | 右翼（咨询构图，样张待确认）
+VS 徽章压在区块标签行；表头：图标圆 + 路线名 + "N 项占优"胶囊，下接各自颜色的粗线；下面 5 行浅色单元格（栏间留白、行间留白），每行左右两翼的优势/劣势条目与中间的指标对齐（条目 `ref` = 指标行号，无 `ref` 的条目放进空行）；占优一方实色渐变 + 粗体数值；底部框架条。
+- `zones[左, 右]`（默认取 `claim`），`sides` 2：`{name(≤ 14 字符), tone, icon, pros[≤ 2], cons[≤ 2]}`；条目为字符串或 `{text(≤ 14 字), ref}`
+- `metrics{title, left, right, rows ≤ 5 {label(≤ 10 字), a, b, better: low|high}}`（占优项数自动算）
 - `strip`：同咨询版式；格子第二行留空 `["有家充", ""]` 时显示为单行大字
 
 ### matrix — 开放式 2×2 矩阵 + 证据翼（咨询构图，样张待确认）
-矩阵去卡片：浅色象限 + 编号图标圆 + 标题 + 标签 + 说明；`band` 行用红色虚线框圈出并挂胶囊；右翼：大数字 + 拆分条（圆点虚线连到 band）+ 两个证据小条形图；底部注释线。
+矩阵去卡片：浅色象限 + 编号图标圆 + 标题 + 标签 + 说明；`band` 行用红色虚线框圈出并挂胶囊；右翼：大数字 + 拆分条（圆点虚线连到 band）+ 两个证据小条形图；出处写在各模块下方的微型说明里。
 - `zones[左, 右]`，`axes{x, y, ends?[低, 高]}`（轴名不要带箭头，两端自动标"低 / 高"）
 - `quads[4]{title(≤ 6 字), label(≤ 9 字), desc(≤ 14 字), tone, icon}`（顺序：左上、右上、左下、右下）
-- `band{row, label(≤ 6 字)}`，`hero{value, unit, icon, title, sub}`，`split{title?, parts[2]{label, value, tone, show_value, note}}`
-- `evidence` ≤ 2：`{title, tone, label_w?, unit?, rows ≤ 3 {label, value, tone: navy|red|mid}}`（可放跨页引用，注明出处）
-- `note`：页底注释
+- `band{row, label(≤ 6 字)}`，`hero{value, unit, icon, title, sub}`，`split{title?, parts[2]{label, value, tone, show_value, note}, caption}`
+- `evidence` ≤ 2：`{title, tone, label_w?, unit?, caption, rows ≤ 3 {label, value, tone: navy|red|mid}}`（可放跨页引用，caption 注明出处）
 
 ## 二、卡片与图表版式
 

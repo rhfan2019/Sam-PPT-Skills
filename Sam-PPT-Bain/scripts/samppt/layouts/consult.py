@@ -7,10 +7,11 @@ from pptx.chart.data import CategoryChartData
 from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION
 from pptx.enum.dml import MSO_LINE_DASH_STYLE as DASH
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.util import Pt
 
 from ..charts import *
 from ..components import *
-from ..deck import grad, alpha, shadow
+from ..deck import grad, alpha, shadow, rgb
 from ..tokens import *
 
 
@@ -294,11 +295,11 @@ def hub(D, s):
     do_strip(D, s.get("strip"))
 
 
-def footnote(D, text, y=6.45):
-    """Thin rule + grey source / method note; closes consulting pages that have no framework strip."""
+def caption(D, x, y, w, text, align="l"):
+    """Micro method / source note that belongs to the module right above it (never a page-wide '注' line:
+    it competes with the footer disclaimer)."""
     if text:
-        D.line(EL, y - 0.08, ER, y - 0.08, "BFBFBF", 0.75)
-        D.text(EL, y, CW, 0.22, text, size=8.5, color=GREY_M)
+        D.text(x, y, w, 0.2, text, size=8, color=GREY_M, align=align, anchor="m")
 
 
 def mini_bars(D, x, y, w, rows, step=0.3, lw=0.9, unit=""):
@@ -318,7 +319,12 @@ def mini_bars(D, x, y, w, rows, step=0.3, lw=0.9, unit=""):
 
 # =================================================================================== dual_charts
 SER_COLS = [NAVY, RED, NAVY_L, NAVY_M]
-SER_GRADS = {0: ("2E5A94", "16365F"), 1: ("C0503E", "8E2B1D")}
+SER_GRADS = {0: ("2E5A94", "16365F"), 1: ("C0503E", "8E2B1D"), 2: ("C3D2E6", "9DB3D1")}
+
+
+def _ser_outline(ser, color=WHITE, width=0.75):
+    ser.format.line.color.rgb = rgb(color)
+    ser.format.line.width = Pt(width)
 
 
 def _stack_chart(D, p, x, y, w, h, plot):
@@ -334,18 +340,19 @@ def _stack_chart(D, p, x, y, w, h, plot):
         cd.add_series(k, v)
     col = p["type"] == "stacked_column"
     ch = D.chart(XL_CHART_TYPE.COLUMN_STACKED if col else XL_CHART_TYPE.AREA_STACKED, cd, x, y, w, h)
-    chart_text(ch, 9)
+    chart_text(ch, 9 if col else 8.5)
     lx, ty, lw_, th = plot
     plot_layout(ch, lx, ty, lw_, th)
     for i, ser in enumerate(ch.plots[0].series):
         fill_series(ser, SER_COLS[i % 4])
         if i in SER_GRADS:
             ser_grad(ser, *SER_GRADS[i])
+        _ser_outline(ser, WHITE, 0.75 if col else 1.25)     # crisp white seams between stacked segments / bands
     vmax, unit = nice_max(max(totals))
     va = ch.value_axis
     va.maximum_scale = vmax; va.minimum_scale = 0; va.major_unit = unit
     if col:
-        ch.plots[0].gap_width = 70
+        ch.plots[0].gap_width = 65
         series_lines(ch)
         hide_val_axis(ch)
         for i, ser in enumerate(ch.plots[0].series):
@@ -356,7 +363,7 @@ def _stack_chart(D, p, x, y, w, h, plot):
                 if v < vmax * 0.045:
                     hide_point_label(ser, j)
     else:
-        gridlines(va); axis_line(va, show=False)
+        gridlines(va, "E9EDF3"); axis_line(va, show=False)
     axis_line(ch.category_axis)
     pl, pw, pt, ph = x + lx * w, lw_ * w, y + ty * h, th * h
     px = [pl + (i + 0.5) * pw / n for i in range(n)] if col else [pl + pw * i / (n - 1) for i in range(n)]
@@ -365,163 +372,187 @@ def _stack_chart(D, p, x, y, w, h, plot):
     for k in names:
         v = series[k][-1]
         mids.append(yof(cum + v / 2)); cum += v
-    return {"px": px, "py": [yof(t) for t in totals], "mids": mids, "names": names, "bw": pw / n * 100 / 170}
+    return {"px": px, "py": [yof(t) for t in totals], "mids": mids, "names": names, "step": pw / n,
+            "bw": pw / n / 1.65, "pt": pt, "ph": ph}
 
 
 def _end_labels(D, x, mids, names, tags=None, w=1.0):
     """Series names written next to the last data point, in series colour; optional pill (growth, share)."""
     ys = list(mids)
     for k in range(1, len(ys)):           # keep labels at least one line apart
-        ys[k] = min(ys[k], ys[k - 1] - 0.27)
+        ys[k] = min(ys[k], ys[k - 1] - 0.3)
     for k, (yy, n) in enumerate(zip(ys, names)):
         c = SER_COLS[k % 4]
-        D.text(x, yy - 0.12, 0.62, 0.24, n, size=10, color=NAVY_M if c == NAVY_L else c, face=B, anchor="m")
+        c = NAVY_M if c == NAVY_L else c
+        D.rect(x, yy - 0.04, 0.08, 0.08, fill=c, shape=MSO_SHAPE.OVAL)
+        D.text(x + 0.12, yy - 0.12, 0.5, 0.24, n, size=10, color=c, face=B, anchor="m")
         if tags:
-            outline_pill(D, x + 0.48, yy - 0.12, w - 0.48, tags[k], "red" if k else "navy", h=0.24, size=9)
+            outline_pill(D, x + w - 0.5, yy - 0.12, 0.5, tags[k], "red" if k else "navy", h=0.24, size=9)
 
 
 def dual_charts(D, s):
-    """Annual structure (stacked columns + series lines + share pills) | monthly trend (stacked area,
-    direct labels + growth pills) | evidence column (growth KPIs, split of the increment)."""
+    """Three equal columns split by hairline dividers: annual structure (stacked columns + series lines +
+    share pills) | monthly trend (stacked area, direct labels + growth pills) | evidence (growth KPIs, split
+    of the increment). Each column carries its own micro caption on one shared baseline."""
     frame(D, s)
     z = s.get("zones", ["", "", ""])
     L, Rp = s["left"], s["right"]
-    lx0, lw0 = EL, 5.15
-    rx0, rw0 = 5.75, 4.35
-    ex, ew = 10.4, ER - 10.4
-    zone(D, lx0, z[0], "navy", w=2.2)
-    zone(D, rx0, z[1], "navy", w=2.2)
-    if len(z) > 2:
-        zone(D, ex, z[2], "red", w=ew)
-    cy, chh = 2.42, 3.72
-    for x, w, p in ((lx0, lw0, L), (rx0, rw0, Rp)):
-        D.text(x, 2.1, w, 0.26, p["title"], size=10, color=NAVY, face=M, anchor="m")
-    # left: annual stacked columns
-    g = _stack_chart(D, L, lx0, cy, lw0, chh, (0.0, 0.07, 0.82, 0.85))
-    _end_labels(D, g["px"][-1] + g["bw"] / 2 + 0.08, g["mids"], g["names"])
+    (c1, w), (c2, _), (c3, _) = cols(3, 0.4)
+    top, bot, cap_y = 2.12, 6.5, 6.3
+    for xd in (c1 + w + 0.2, c2 + w + 0.2):
+        D.line(xd, top, xd, bot, GREY_L, 0.75)
+    for x, t, tone in ((c1, z[0], "navy"), (c2, z[1], "navy"), (c3, z[2] if len(z) > 2 else "", "red")):
+        zone(D, x, t, tone, w=w)
+    cy, chh = 2.5, 3.42
+    for x, p in ((c1, L), (c2, Rp)):
+        D.text(x, top, w, 0.26, p["title"], size=10, color=NAVY, face=M, anchor="m")
+    # column 1: annual stacked columns, latest year on a tinted band
+    lab_w = 0.68
+    plot = (0.0, 0.08, (w - lab_w) / w, 0.84)
+    pl, pw = c1, w - lab_w
+    n = len(L["categories"])
+    st = pw / n
+    D.rect(pl + (n - 1) * st + 0.02, cy + 0.02, st - 0.04, chh + 0.34, fill="FBEFEC")
+    g = _stack_chart(D, L, c1, cy, w, chh, plot)
+    _end_labels(D, pl + pw + 0.04, g["mids"], g["names"])
     co = L.get("callout")
     if co:
         i = co["at"]
-        callout(D, g["px"][i] - 2.45, cy + 0.02, 1.7, 0.42, g["px"][i] - 0.12, g["py"][i] + 0.03, co["text"], size=10)
+        callout(D, g["px"][i] - 2.55, cy + 0.06, 1.65, 0.4, g["px"][i] - g["bw"] / 2 + 0.04, g["py"][i] + 0.04, co["text"], size=10)
     row = L.get("pill_row")
     if row:
-        gy = cy + chh + 0.04
+        gy = cy + chh + 0.06
+        pw_ = min(0.6, st - 0.08)
         for i, v in enumerate(row["values"]):
             hot = v >= row.get("hot", 1e9)
-            outline_pill(D, g["px"][i] - 0.32, gy, 0.64, f'{v:g}{row.get("suffix", "")}', "red", h=0.26, size=9.5, filled=hot)
-        D.text(g["px"][-1] + 0.4, gy, lw0 - (g["px"][-1] + 0.4 - lx0), 0.26, "← " + row["label"], size=9, color=RED, face=M, anchor="m")
-    # right: monthly stacked area
-    g2 = _stack_chart(D, Rp, rx0, cy, rw0, chh, (0.09, 0.07, 0.67, 0.85))
-    _end_labels(D, g2["px"][-1] + 0.1, g2["mids"], g2["names"], Rp.get("end_tags"), w=rx0 + rw0 - g2["px"][-1] - 0.1)
+            outline_pill(D, g["px"][i] - pw_ / 2, gy, pw_, f'{v:g}{row.get("suffix", "")}', "red", h=0.26, size=9.5, filled=hot)
+        D.text(pl + pw + 0.04, gy, lab_w, 0.26, row["label"], size=9, color=RED, face=M, anchor="m")
+    caption(D, c1, cap_y, w, L.get("caption"))
+    # column 2: monthly stacked area, last month marked
+    tag_w = 1.22
+    plot = (0.1, 0.08, (w - tag_w) / w - 0.1, 0.84)
+    g2 = _stack_chart(D, Rp, c2, cy, w, chh, plot)
+    xl = g2["px"][-1]
+    D.line(xl, g2["pt"] - 0.05, xl, g2["pt"] + g2["ph"], RED, 0.75, DASH.DASH)
+    _end_labels(D, xl + 0.08, g2["mids"], g2["names"], Rp.get("end_tags"), w=c2 + w - xl - 0.08)
     co = Rp.get("callout")
     if co:
         i = co["at"]
-        callout(D, g2["px"][i] - 2.35, cy + 0.02, 1.85, 0.42, g2["px"][i] - 0.05, g2["py"][i] + 0.02, co["text"], size=10)
-    if Rp.get("end_caption"):
-        D.text(g2["px"][-1] + 0.1, min(g2["mids"]) - 0.62, rx0 + rw0 - g2["px"][-1] - 0.1, 0.24, Rp["end_caption"], size=8.5,
-               color=GREY_M, anchor="m")
-    # evidence column
+        callout(D, g2["px"][i] - 2.3, cy + 0.06, 1.8, 0.4, g2["px"][i] - 0.05, g2["py"][i] + 0.02, co["text"], size=10)
+    caption(D, c2, cap_y, w, Rp.get("caption"))
+    # column 3: evidence
     ev = s.get("evidence", {})
-    y = 2.1
+    y = top
     if ev.get("kpis"):
-        module_head(D, ex, y, ew, ev.get("kpi_title", "关键指标"))
+        module_head(D, c3, y, w, ev.get("kpi_title", "关键指标"))
         for k, kp in enumerate(ev["kpis"][:3]):
-            kpi_box(D, ex, y + 0.4 + k * 0.66, ew, 0.58, kp["value"], kp.get("unit", ""), kp["label"], kp.get("up", True),
+            kpi_box(D, c3, y + 0.42 + k * 0.68, w, 0.6, kp["value"], kp.get("unit", ""), kp["label"], kp.get("up", True),
                     kp.get("tone", "red"))
-        y += 0.4 + 3 * 0.66 + 0.2
+        y += 0.42 + 3 * 0.68 + 0.2
     sp = ev.get("split")
     if sp:
-        module_head(D, ex, y, ew, sp["title"], "red")
-        y += 0.42
-        x0, tot = ex, sum(pt_["value"] for pt_ in sp["parts"])
+        module_head(D, c3, y, w, sp["title"], "red")
+        y += 0.44
+        x0, tot = c3, sum(pt_["value"] for pt_ in sp["parts"])
         for i, pt_ in enumerate(sp["parts"]):
-            pw_ = ew * pt_["value"] / tot
-            b = D.rect(x0, y, pw_, 0.3, fill=NAVY if i == 0 else RED)
+            pw_ = w * pt_["value"] / tot
+            b = D.rect(x0, y, pw_, 0.32, fill=NAVY if i == 0 else RED)
             grad(b, GRAD_NAVY if i == 0 else GRAD_RED, angle=0)
-            D.text(x0 + 0.08, y, pw_ - 0.1, 0.3, f'{pt_["label"]} {pt_["value"]:g}%', size=9, color=WHITE, face=M, anchor="m")
+            D.text(x0 + 0.1, y, pw_ - 0.2, 0.32, f'{pt_["label"]} {pt_["value"]:g}%', size=9.5, color=WHITE, face=M, anchor="m")
             if pt_.get("note"):
-                D.text(x0 + 0.02, y + 0.34, pw_ - 0.04, 0.2, pt_["note"], size=8.5, color=NAVY if i == 0 else RED, face=M)
+                D.text(x0 + 0.02, y + 0.36, pw_ - 0.04, 0.22, pt_["note"], size=9, color=NAVY if i == 0 else RED, face=M, anchor="m")
             x0 += pw_
         if sp.get("caption"):
-            D.text(ex, y + 0.7, ew, 0.5, sp["caption"], size=9, color=GREY, spacing=1.1, hl={"face": B, "color": RED})
-    footnote(D, s.get("note"), y=6.68)
+            D.text(c3, y + 0.68, w, 0.3, sp["caption"], size=10.5, color=GREY, anchor="m", hl={"face": B, "color": RED})
+    caption(D, c3, cap_y, w, ev.get("caption"))
 
 
 # =================================================================================== versus
 def versus(D, s):
-    """Two mirrored wings (side name, pros / cons as open items, photo) around a centre metric duel;
-    items carry the number of the metric row that proves them. Framework strip closes the page."""
+    """Three-column grid: wing | metric duel | wing. Each of the 5 rows lines up one strength / weakness of each
+    side with the metric that proves it (item `ref` = row number), so the eye reads row by row.
+    Framework strip closes the page."""
     frame(D, s)
     sides = s["sides"][:2]
-    z = s.get("zones") or [sd.get("claim", "") for sd in sides]
-    zone(D, EL, z[0], "navy", w=2.6)
-    zone(D, ER - 2.6, z[1], "red", w=2.6)
+    m = s["metrics"]
+    rows = m["rows"][:5]
+    nr = len(rows)
+    better = [((r["a"] < r["b"]) if r.get("better", "low") == "low" else (r["a"] > r["b"])) for r in rows]
+    wins = [sum(better), nr - sum(better)]
+    ww, gap = 3.85, 0.3
+    c0, c1 = EL + ww + gap, ER - ww - gap
     cx = (EL + ER) / 2
-    gcircle(D, cx - 0.45, 1.58, 0.9, "red", text="VS", size=20, ring=3)
-    ww = 3.8                                   # wing width
+    z = s.get("zones") or [sd.get("claim", "") for sd in sides]
+    zone(D, EL, z[0], "navy", w=ww)
+    zone(D, ER - ww, z[1], "red", w=ww)
+    gcircle(D, cx - 0.32, ZONE_Y + ZONE_H / 2 - 0.32, 0.64, "red", text="VS", size=15, ring=2.5)
+    # column headers, each closed by a heavy rule in its own colour
+    hy, hh = 2.16, 0.56
     for i, sd in enumerate(sides):
         tone = sd.get("tone", "navy" if i == 0 else "red")
         col = col_of(tone)
         left = i == 0
         x0 = EL if left else ER - ww
-        al = "l" if left else "r"
-        # wing header: icon circle + side name, rule underneath
-        ix = x0 if left else ER - 0.6
-        gcircle(D, ix, 2.2, 0.6, tone, icon=sd.get("icon", "battery"), ring=1.5)
-        D.text(x0 + (0.75 if left else 0), 2.2, ww - 0.75, 0.6, sd["name"], size=18, color=col, face=H, align=al, anchor="m")
-        D.line(x0, 2.92, x0 + ww, 2.92, NAVY_B if left else RED_B, 0.75)
-        for k, (head, items, ic, icol) in enumerate((("优势", sd.get("pros", []), "check", col),
-                                                       ("劣势", sd.get("cons", []), "warn", GREY_M))):
-            gy = 3.08 + k * 0.92
-            chip(D, x0 if left else ER - 0.62, gy + 0.05, 0.62, head, tone if k == 0 else "navy", h=0.28, size=10)
-            for j, it in enumerate(items[:2]):
-                it = it if isinstance(it, dict) else {"text": it}
-                yy = gy + j * 0.4
-                tx = x0 + 0.78 if left else x0 + 0.3
-                if left:
-                    D.icon(ic, tx, yy + 0.07, 0.24, color=icol)
-                    D.text(tx + 0.32, yy, ww - 1.45, 0.38, it["text"], size=11, color=GREY, anchor="m")
-                else:
-                    D.icon(ic, ER - 0.78 - 0.24, yy + 0.07, 0.24, color=icol)
-                    D.text(x0 + 0.35, yy, ww - 1.45, 0.38, it["text"], size=11, color=GREY, anchor="m", align="r")
-                if it.get("ref"):
-                    bx = x0 + ww - 0.26 if left else x0
-                    num_badge(D, bx, yy + 0.06, 0.26, f'{it["ref"]:02d}', tone)
-        if sd.get("photo"):
-            pw_ = sd.get("photo_w", 2.0)
-            D.photo_fit(sd["photo"], x0 + (0 if left else ww - pw_), 4.95, pw_)
+        gcircle(D, x0 if left else ER - 0.5, hy + 0.03, 0.5, tone, icon=sd.get("icon", "battery"), ring=1.5)
+        D.text(x0 + (0.62 if left else 1.1), hy, ww - 1.72, hh, sd["name"], size=16, color=col, face=H,
+               align="l" if left else "r", anchor="m")
+        outline_pill(D, x0 + ww - 1.0 if left else x0, hy + 0.14, 1.0, f"{wins[i]} 项占优", tone, h=0.28, size=9.5,
+                     filled=wins[i] > wins[1 - i])
+        D.line(x0, hy + hh + 0.06, x0 + ww, hy + hh + 0.06, col, 1.5)
+    D.text(c0, hy, c1 - c0, hh, [("◀ " + m.get("left", "纯电") + "    ", {"color": NAVY}), (m["title"], {"color": GREY}),
+                                 ("    " + m.get("right", "混动") + " ▶", {"color": RED})], size=11, face=M, align="c", anchor="m")
+    D.line(c0, hy + hh + 0.06, c1, hy + hh + 0.06, GREY_M, 1.5)
+    # row grid
+    top, pitch, chh = hy + hh + 0.18, 0.6, 0.54
+    tints = ("F1F5FA", "F6F7F9", "FBF2F0")
+    for j in range(nr):
+        y = top + j * pitch
+        for x, w_, t in ((EL, ww, tints[0]), (c0, c1 - c0, tints[1]), (ER - ww, ww, tints[2])):
+            D.rect(x, y, w_, chh, fill=t)
+    # wing items placed on the row of the metric they refer to
+    for i, sd in enumerate(sides):
+        tone = sd.get("tone", "navy" if i == 0 else "red")
+        left = i == 0
+        x0 = EL if left else ER - ww
+        slots, free = {}, []
+        items = [(it if isinstance(it, dict) else {"text": it}, k) for k, lst in enumerate((sd.get("pros", []), sd.get("cons", [])))
+                 for it in lst[:2]]
+        for it, k in items:
+            r = it.get("ref")
+            if r and 1 <= r <= nr and r - 1 not in slots:
+                slots[r - 1] = (it, k)
+            else:
+                free.append((it, k))
+        for it_k in free:
+            j = next(j for j in range(nr) if j not in slots)
+            slots[j] = it_k
+        for j, (it, k) in slots.items():
+            y = top + j * pitch
+            pro = k == 0
+            px = x0 + 0.12 if left else x0 + ww - 0.12 - 0.56
+            D.box_text(px, y + (chh - 0.26) / 2, 0.56, 0.26, "优势" if pro else "劣势", col_of(tone) if pro else WHITE,
+                       WHITE if pro else GREY_M, 9.5, M, line=None if pro else GREY_L, shape=MSO_SHAPE.ROUNDED_RECTANGLE, adj=0.5)
+            tx = x0 + 0.8 if left else x0 + 0.15
+            D.text(tx, y, ww - 0.95, chh, it["text"], size=11, color=GREY if pro else GREY_M, face=M if pro else R,
+                   align="l" if left else "r", anchor="m")
     # centre: metric duel
-    m = s.get("metrics")
-    if m:
-        c0, c1 = EL + ww + 0.3, ER - ww - 0.3
-        rows = m["rows"][:5]
-        better = [((r["a"] < r["b"]) if r.get("better", "low") == "low" else (r["a"] > r["b"])) for r in rows]
-        module_head(D, cx - 1.3, 2.65, 2.6, m["title"], "navy")
-        D.text(c0, 2.65, 1.0, 0.24, f"{sum(better)} 项占优", size=10, color=NAVY, face=B)
-        D.text(c1 - 1.0, 2.65, 1.0, 0.24, f"{len(rows) - sum(better)} 项占优", size=10, color=RED, face=B, align="r")
-        top, step = 3.08, 0.56
-        D.line(cx, top - 0.05, cx, top + len(rows) * step - 0.05, NAVY_B, 0.75, DASH.DASH)
-        half = (c1 - c0) / 2 - 0.55
-        for j, r in enumerate(rows):
-            y = top + j * step
-            mx = max(r["a"], r["b"])
-            lab = f'{j + 1:02d}  ' + r["label"]
-            D.rect(cx - 1.25, y - 0.01, 2.5, 0.26, fill=WHITE)
-            D.text(cx - 1.25, y, 2.5, 0.24, [(f'{j + 1:02d}  ', {"face": H, "color": RED}), (r["label"], {})],
-                   size=9.5, color=NAVY_D, face=M, align="c", anchor="m")
-            yb = y + 0.29
-            for side, v, win in ((0, r["a"], better[j]), (1, r["b"], not better[j])):
-                bw = max(half * v / mx, 0.05)
-                c = (NAVY, RED)[side] if win else (NAVY_L, RED_L)[side]
-                bx = cx - 0.04 - bw if side == 0 else cx + 0.04
-                b = D.rect(bx, yb, bw, 0.17, fill=c)
-                if win:
-                    grad(b, [(0, "2E5A94", 100), (100, "16365F", 100)] if side == 0 else GRAD_RED, angle=0)
-                vx = bx - 0.5 if side == 0 else bx + bw + 0.05
-                D.text(vx, yb - 0.04, 0.45, 0.25, f"{v:g}", size=10.5 if win else 9.5, color=(NAVY, RED)[side] if win else GREY_M,
-                       face=H if win else R, align="r" if side == 0 else "l", anchor="m")
-        if m.get("note"):
-            D.text(c0, top + len(rows) * step, c1 - c0, 0.22, m["note"], size=8, color=GREY_M, align="c")
+    half = (c1 - c0) / 2 - 0.6
+    for j, r in enumerate(rows):
+        y = top + j * pitch
+        mx = max(r["a"], r["b"])
+        D.text(c0, y + 0.03, c1 - c0, 0.24, [(f'{j + 1:02d}  ', {"face": H, "color": RED}), (r["label"], {})],
+               size=9.5, color=NAVY_D, face=M, align="c", anchor="m")
+        yb = y + 0.3
+        for side, v, win in ((0, r["a"], better[j]), (1, r["b"], not better[j])):
+            bw = max(half * v / mx, 0.05)
+            c = (NAVY, RED)[side] if win else (NAVY_L, RED_L)[side]
+            bx = cx - 0.04 - bw if side == 0 else cx + 0.04
+            b = D.rect(bx, yb, bw, 0.15, fill=c)
+            if win:
+                grad(b, [(0, "2E5A94", 100), (100, "16365F", 100)] if side == 0 else GRAD_RED, angle=0)
+            vx = bx - 0.5 if side == 0 else bx + bw + 0.05
+            D.text(vx, yb - 0.05, 0.45, 0.25, f"{v:g}", size=10.5 if win else 9.5, color=(NAVY, RED)[side] if win else GREY_M,
+                   face=H if win else R, align="r" if side == 0 else "l", anchor="m")
     do_strip(D, s.get("strip"))
 
 
@@ -535,7 +566,7 @@ def matrix(D, s):
     zone(D, EL, z[0], "navy", w=2.2)
     zone(D, rx, z[1], "red", w=2.2)
     ax_ = s.get("axes", {})
-    mx0, mx1, my0, my1, g = 0.9, 7.6, 2.2, 6.0, 0.08
+    mx0, mx1, my0, my1, g = 0.9, 7.6, 2.2, 6.2, 0.08
     qw, qh = (mx1 - mx0 - g) / 2, (my1 - my0 - g) / 2
     xa = mx0 - 0.12
     D.line(xa, my1 + 0.1, mx1 + 0.05, my1 + 0.1, NAVY, 1.5, arrow=True)
@@ -591,6 +622,7 @@ def matrix(D, s):
             if p.get("note"):
                 D.text(x0 + 0.02, y + 0.36, pw_ - 0.04, 0.22, p["note"], size=9, color=col_of(tone), face=M, anchor="m")
             x0 += pw_
+        caption(D, rx, y + 0.64, ER - rx, sp.get("caption"), align="r")
         if band:
             by = my0 + band.get("row", 1) * (qh + g)
             dot_line(D, rx - 0.02, y + 0.16, mx1 + 0.08, by + qh / 2, RED, dot_start=True)
@@ -599,9 +631,9 @@ def matrix(D, s):
         mw = (ER - rx - 0.25 * (len(mods) - 1)) / len(mods)
         for k, md in enumerate(mods):
             x = rx + k * (mw + 0.25)
-            module_head(D, x, 4.45, mw, md["title"], md.get("tone", "navy"))
-            mini_bars(D, x, 4.88, mw, md["rows"], step=0.36, lw=md.get("label_w", 0.85), unit=md.get("unit", ""))
-    footnote(D, s.get("note"), y=6.55)
+            module_head(D, x, 4.55, mw, md["title"], md.get("tone", "navy"))
+            mini_bars(D, x, 4.98, mw, md["rows"], step=0.38, lw=md.get("label_w", 0.85), unit=md.get("unit", ""))
+            caption(D, x, 6.3, mw, md.get("caption"), align="r")
 
 
 LAYOUTS = {"chart_phases": chart_phases, "funnel": funnel, "hub": hub,
