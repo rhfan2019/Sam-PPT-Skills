@@ -6,3 +6,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 ~$*
+
+# local scratch (legacy builder scripts, sample decks)
+_work/

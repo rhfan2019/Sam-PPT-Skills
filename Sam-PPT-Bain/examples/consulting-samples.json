@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "title": "新能源汽车报告-咨询版样张",
+    "org": "SamPPT 研究",
+    "sign": "SamPPT 研究",
+    "disclaimer": "本报告数据为示例数据，仅供参考。"
+  },
+  "slides": [
+    {
+      "layout": "chart_phases",
+      "title": "七年销量增长 12 倍，渗透率进入“后半程”",
+      "section": "01 市场全景",
+      "thesis": "2019–2025：**导入期 → 爆发期 → 后半程**，渗透率越过 50% 后，增长动力由增量渗透转向存量替换",
+      "zones": ["销量与渗透率走势", "阶段诊断"],
+      "categories": ["2019", "2020", "2021", "2022", "2023", "2024", "2025"],
+      "bars": {"name": "销量（万辆）", "values": [106, 117, 333, 567, 774, 1090, 1300]},
+      "line": {"name": "渗透率（%）", "values": [5.0, 5.8, 15.0, 27.6, 35.7, 47.6, 54.0], "ref": 50, "ref_label": "渗透率 50% 线"},
+      "callout": {"at": 3, "text": "两年 **×4.8**"},
+      "growth": "auto",
+      "note": "柱：销量（万辆）   线：渗透率（%）   胶囊：同比增速   注：数据为示例数据",
+      "phases": [
+        {"from": 0, "to": 1, "name": "导入期", "years": "2019–2020", "tag": "政策驱动", "tone": "navy", "icon": "coin",
+         "points": ["年销约 100 万辆", "渗透率不足 6%"]},
+        {"from": 2, "to": 3, "name": "爆发期", "years": "2021–2022", "tag": "爆发增长", "tone": "red", "icon": "trend",
+         "points": ["2021 年 +185%，2022 年 +70%", "渗透率 5.8% → 27.6%"]},
+        {"from": 4, "to": 6, "name": "后半程", "years": "2023–2025", "tag": "存量替换", "tone": "navy", "icon": "city",
+         "points": ["增速回落到 20% 左右（2025 +19%）", "增量越来越依赖低线城市"]}
+      ],
+      "kpis": [
+        {"value": "52", "unit": "%", "label": "年复合增速", "up": true},
+        {"value": "316", "unit": "万辆", "label": "2024 年新增", "up": true},
+        {"value": "210", "unit": "万辆", "label": "2025 新增 −34%", "up": false}
+      ],
+      "strip": {"left": "增量", "left_boxes": [["增量渗透", "高速增长"], ["政策驱动", "转向市场"]],
+                "right": "存量", "right_boxes": [["存量替换", "增速回落"], ["低线城市", "增量来源"]],
+                "mid": ["动力切换", "结构变化"], "left_icon": "trend", "right_icon": "city"}
+    },
+    {
+      "layout": "funnel",
+      "title": "购车决策漏斗：试驾是最大的流失环节",
+      "section": "03 消费者洞察",
+      "thesis": "购车决策路径：每 100 个认知用户最终 **7.2** 人提车，**兴趣 → 试驾** 是流失最集中的一环",
+      "zones": ["决策阶段", "转化诊断"],
+      "axis_label": "用户决策路径",
+      "stages": [
+        {"name": "认知", "value": 100, "desc": "通过短视频、口碑了解到车型", "icon": "chat"},
+        {"name": "兴趣", "value": 46, "desc": "主动搜索参数、加入车友群", "icon": "computer"},
+        {"name": "到店试驾", "value": 18, "desc": "试驾是最大断点，体验不佳直接流失", "icon": "target"},
+        {"name": "下订", "value": 8.5, "desc": "价格权益、交付周期决定是否下订", "icon": "coin"},
+        {"name": "交付", "value": 7.2, "desc": "交付期超过 8 周时退订率显著上升", "icon": "box"}
+      ],
+      "start_note": ["起点：认知用户 100 人", "内容种草决定漏斗口径"],
+      "transition_notes": ["每 100 人流失 54 人", "转化率全链路最低，流失 61%", "价格权益与交付周期定成败", "交付期 > 8 周退订上升"],
+      "kpis": [
+        {"value": "7.2", "unit": "%", "label": "认知 → 提车 整体转化", "up": false},
+        {"value": "61", "unit": "%", "label": "兴趣 → 试驾 环节流失", "up": true},
+        {"value": "85", "unit": "%", "label": "下订 → 交付 转化", "up": false}
+      ],
+      "mini_chart": {"title": "每 100 人剩余人数", "label": "试驾断崖 −28 人"},
+      "strip": {"left": "用户", "left_boxes": [["内容种草", "口碑传播"], ["主动搜索", "车友社群"]],
+                "right": "门店", "right_boxes": [["试驾体验", "到店转化"], ["价格权益", "交付周期"]],
+                "mid": ["线上影响线下", "线下反哺口碑"], "left_icon": "group", "right_icon": "home"}
+    },
+    {
+      "layout": "hub",
+      "title": "补能生态：六种方式共同化解续航焦虑",
+      "section": "04 产业链与竞争",
+      "thesis": "补能体系四步演进：**家充打底 → 快充主力 → 超充 / 换电提速 → 车网协同**，共同化解续航焦虑",
+      "zones": ["用户侧补能", "网络侧补能"],
+      "center": ["补能网络", "化解续航焦虑"],
+      "background": "city_tech",
+      "nodes": [
+        {"name": "家用慢充", "metric": "55%", "group": "成本最低", "desc": "覆盖约 55% 有固定车位用户", "icon": "home", "tone": "navy"},
+        {"name": "公共快充", "metric": "2.4:1", "group": "城市主力", "desc": "车桩比约 2.4:1", "icon": "battery", "tone": "navy"},
+        {"name": "超充站", "metric": "5 分钟", "group": "极速补能", "desc": "补能 200 公里，头部车企自建", "icon": "storm", "tone": "red"},
+        {"name": "换电站", "metric": "3 分钟", "group": "极速补能", "desc": "适合出租与网约车", "icon": "cycle", "tone": "red"},
+        {"name": "光储充一体", "metric": "削峰填谷", "group": "车网协同", "desc": "降低电网压力", "icon": "city", "tone": "navy"},
+        {"name": "V2G 车网互动", "metric": "反向送电", "group": "车网协同", "desc": "未来的移动储能", "icon": "improve", "tone": "navy"}
+      ],
+      "evidence_left": {"type": "split_bar", "title": "用户车位结构", "tone": "navy",
+                        "parts": [{"label": "有固定车位", "value": 55, "note": "→ 家充可覆盖"}, {"label": "无固定车位", "value": 45, "note": "→ 依赖公共补能"}]},
+      "evidence_right": {"type": "bars", "title": "补能耗时对比（分钟）",
+                         "rows": [{"label": "换电", "value": 3, "tone": "red"}, {"label": "超充 200 km", "value": 5, "tone": "red"},
+                                  {"label": "混动加油", "value": 5, "tone": "mid"}, {"label": "纯电常规补能", "value": 30, "tone": "navy"}]},
+      "strip": {"left": "用户", "left_boxes": [["家用慢充", "成本最低"], ["公共快充", "城市主力"]],
+                "right": "电网", "right_boxes": [["超充换电", "极速补能"], ["光储充 V2G", "车网协同"]],
+                "mid": ["需求牵引", "能力支撑"], "left_icon": "home", "right_icon": "city"}
+    }
+  ]
+}
