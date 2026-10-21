@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Card-based data pages: KPI rings, twin charts, dashboard. Panels are reusable chart blocks."""
+"""Card-based data pages: KPI rings, dashboard (dual_charts moved to consult.py). Panels are reusable chart blocks."""
 import math
 
 from pptx.chart.data import CategoryChartData
@@ -165,36 +165,6 @@ def panel_callout(D, geo, co, x, y, w):
     callout(D, bx, y + 0.08, bw, bh, tipx, tipy, co["text"], size=10)
 
 
-# =================================================================================== dual_charts
-def dual_charts(D, s):
-    """Two chart cards side by side, each with legend, optional call-out, a pill row and notes."""
-    frame(D, s)
-    for (x, w), p, tone in zip(cols(2, 0.21), (s["left"], s["right"]), ("navy", "red")):
-        tone = p.get("tone", tone)
-        wcard(D, x, CARD_TOP, w, 5.4, tone)
-        gbar(D, x, CARD_TOP, w, 0.45, p["title"], tone, 13)
-        names = list(p["series"].keys())
-        legend(D, x + 0.3, 1.7, names, SERIES_COLORS)
-        geo = panel_chart(D, p, x + 0.1, 1.95, w - 0.21, 3.55, tone)
-        panel_callout(D, geo, p.get("callout"), x, 2.12, w)
-        gy = 5.55
-        row = p.get("pill_row")
-        if row and geo:
-            D.text(x + 0.15, gy - 0.02, 1.2, 0.3, row["label"], size=9.5, color=GREY_M, face=M, anchor="m")
-            for i, v in enumerate(row["values"]):
-                hot = v >= row.get("hot", 1e9)
-                outline_pill(D, geo["px"][i] - 0.33, gy, 0.66, f'{v:g}{row.get("suffix", "")}', "red", h=0.27, size=9.5, filled=hot)
-        stats = p.get("stats")
-        if stats:
-            sw = (w - 0.3) / len(stats)
-            for i, (a, b) in enumerate(stats):
-                sx = x + 0.23 + i * sw
-                D.text(sx, gy, sw - 0.75, 0.3, a, size=9.5, color=GREY_M, face=M, anchor="m")
-                D.text(sx + sw - 0.8, gy - 0.02, 0.75, 0.32, b, size=13, color=RED if i == 0 else NAVY, face=H, anchor="m")
-        if p.get("note"):
-            D.text(x + 0.15, 6.05, w - 0.3, 0.32, p["note"], size=10, color=GREY, anchor="m", hl={"face": M, "color": RED})
-
-
 # =================================================================================== dashboard
 def dashboard(D, s):
     """4 KPI tiles on top, 3 chart panels below, each panel closed by a one-line read-out."""
@@ -223,4 +193,4 @@ def dashboard(D, s):
             D.text(x + 0.15, 5.95, w - 0.3, 0.5, p["note"], size=10, color=GREY, anchor="m", hl={"face": H, "color": RED, "size": 13})
 
 
-LAYOUTS = {"kpi_rings": kpi_rings, "dual_charts": dual_charts, "dashboard": dashboard}
+LAYOUTS = {"kpi_rings": kpi_rings, "dashboard": dashboard}

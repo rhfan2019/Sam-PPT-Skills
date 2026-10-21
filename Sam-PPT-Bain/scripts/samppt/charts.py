@@ -166,3 +166,12 @@ def line_to_secondary(ch, idx, color=RED, vmin=-15, vmax=60, fmt='0.0"%"', below
     last = pa.findall(qn("c:valAx"))[-1]
     for a in reversed(list(axes)):
         last.addnext(a)
+
+
+def series_lines(ch, color=NAVY_B, width=0.75):
+    """Dashed connector lines between the segments of neighbouring stacked columns (consulting-style)."""
+    bar = ch._chartSpace.find(".//" + qn("c:barChart"))
+    el = etree.fromstring(
+        f'<c:serLines xmlns:c="{C_NS}" xmlns:a="{A_NS}"><c:spPr><a:ln w="{int(width * 12700)}"><a:solidFill>'
+        f'<a:srgbClr val="{color}"/></a:solidFill><a:prstDash val="dash"/></a:ln></c:spPr></c:serLines>')
+    bar.find(qn("c:axId")).addprevious(el)

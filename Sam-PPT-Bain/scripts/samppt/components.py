@@ -95,7 +95,8 @@ def strip(D, left, lboxes, right, rboxes, mid=("相互影响", "相互影响"), 
     for i, (a, b) in enumerate(lboxes[:2]):
         x = 1.9 + i * 2.02
         D.rect(x, y, 1.9, 0.5, fill="E6ECF5", line=NAVY_B, lw=0.5, dash=DASH.DASH)
-        D.text(x, y, 1.9, 0.5, [spaced(a), spaced(b)], size=9.5, color=NAVY, face=M, align="c", anchor="m", spacing=0.95)
+        D.text(x, y, 1.9, 0.5, [spaced(a), spaced(b)] if b else spaced(a), size=9.5 if b else 11, color=NAVY, face=M,
+               align="c", anchor="m", spacing=0.95)
     D.line(6.05, y + 0.16, 7.35, y + 0.16, NAVY, 1, arrow=True)
     D.line(7.35, y + 0.34, 6.05, y + 0.34, RED, 1, arrow=True)
     D.text(6.0, y - 0.07, 1.4, 0.2, mid[0], size=8.5, color=GREY, align="c")
@@ -103,7 +104,8 @@ def strip(D, left, lboxes, right, rboxes, mid=("相互影响", "相互影响"), 
     for i, (a, b) in enumerate(rboxes[:2]):
         x = 7.45 + i * 2.02
         D.rect(x, y, 1.9, 0.5, fill="F9E9E6", line=RED_B, lw=0.5, dash=DASH.DASH)
-        D.text(x, y, 1.9, 0.5, [spaced(a), spaced(b)], size=9.5, color=RED, face=M, align="c", anchor="m", spacing=0.95)
+        D.text(x, y, 1.9, 0.5, [spaced(a), spaced(b)] if b else spaced(a), size=9.5 if b else 11, color=RED, face=M,
+               align="c", anchor="m", spacing=0.95)
     D.text(ER - 1.32, y, 0.9, 0.5, right, size=15, color=RED, face=M, align="r", anchor="m")
     D.icon(ricon, ER - 0.36, y + 0.07, 0.36, color=RED)
 

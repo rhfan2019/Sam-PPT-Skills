@@ -107,7 +107,7 @@ Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`。
 
 ## 7. 待办与已知问题（建议的下一步顺序）
 
-1. **把其余 17 种版式升级成咨询风格**（最大的一项）。目前只有 `chart_phases`、`funnel`、`hub` 有论点条 + 区块标签 + 框架条；其他版式没有 `thesis` 字段、内容从 1.15″ 开始。建议：先挑 2–3 个（如 `dual_charts`、`matrix`、`versus`）做样张给用户确认，再铺开。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`（刷新临时快照）；用户确认样张后再 `--approve` 对应页码。
+1. **把其余版式升级成咨询风格**（最大的一项）。2026-10-21 第二批：`dual_charts`、`versus`、`matrix` 已改为咨询构图（代码在 `layouts/consult.py`，样张 `examples/consulting-samples-2.json`，对应 nev-report 第 5、7、10 页），**等待用户评审**——用户确认后 `--approve consulting-samples-2:1,2,3;nev-report:5,7,10`，否则按反馈修改。之后再铺开其余 14 种（cover、contents 等开篇页可能不需要论点条，先问用户）。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`。
 2. **用一份新的大纲做端到端测试**（不同行业、不同页数），检验 SKILL.md 的规划指引和各版式容量上限是否合理；容量不够或字段不顺手就改版式。
 3. **文字溢出检查是估算**（按字宽估行数）。可考虑用 PowerPoint COM 读取实际文本框边界做精确检查。
 4. **重叠检查**还没有（比如标注气泡压住数据标签只能靠看图）。

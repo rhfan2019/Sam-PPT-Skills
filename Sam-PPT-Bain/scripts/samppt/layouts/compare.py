@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Comparison pages: versus, spec table, radar, 2x2 matrix, butterfly, persona."""
+"""Comparison pages: spec table, radar, butterfly, persona (versus and matrix moved to consult.py)."""
 from lxml import etree
 from pptx.chart.data import CategoryChartData
 from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_TICK_LABEL_POSITION
@@ -17,62 +17,6 @@ from ..tokens import *
 
 def frame(D, s):
     D.new(s["title"], s.get("section", ""), notes=s.get("speaker_notes"))
-
-
-# =================================================================================== versus
-def versus(D, s):
-    """Two sides (pros / cons / fit + photo) facing a VS badge, and a mirrored metric bar chart."""
-    frame(D, s)
-    gap = 0.53
-    w = (CW - gap) / 2
-    for i, sd in enumerate(s["sides"][:2]):
-        x = EL if i == 0 else ER - w
-        tone = sd.get("tone", "navy" if i == 0 else "red")
-        col = col_of(tone)
-        wcard(D, x, CARD_TOP, w, 2.9, tone)
-        gbar(D, x, CARD_TOP, w, 0.45, [(sd["name"] + "  ", {"face": H}), ("｜" + sd.get("claim", ""), {})], tone, 13)
-        if sd.get("photo"):
-            if i == 0:
-                D.photo_fit(sd["photo"], x + 0.12, 2.05, 1.95)
-            else:
-                D.photo_fit(sd["photo"], x + w - 2.0, 1.9, 1.9)
-        lx = x + 2.1 if i == 0 else x + 0.25
-        for k, (head, items, ic, icol) in enumerate((("优势", sd.get("pros", []), "check", col),
-                                                       ("劣势", sd.get("cons", []), "warn", GREY_M))):
-            yy = 1.78 + k * 0.92
-            chip(D, lx, yy + 0.02, 0.62, head, tone if k == 0 else "navy", size=10)
-            for j, it in enumerate(items[:2]):
-                D.icon(ic, lx + 0.78, yy + 0.03 + j * 0.38, 0.24, color=icol)
-                D.text(lx + 1.1, yy + j * 0.38, 2.75, 0.32, it, size=11, color=GREY, anchor="m")
-        D.line(x + 0.2, 3.62, x + w - 0.2, 3.62, NAVY_B if tone == "navy" else RED_B, 0.5, DASH.DASH)
-        if sd.get("fit"):
-            D.text(x + 0.25, 3.66, w - 0.5, 0.32, sd["fit"], size=10.5, color=col, face=M, anchor="m", align="l" if i == 0 else "r")
-    gcircle(D, (EL + ER) / 2 - 0.5, 2.1, 1.0, "red", text="VS", size=22, ring=3)
-    m = s.get("metrics")
-    if not m:
-        return
-    wcard(D, EL, 4.25, CW, 2.3)
-    gbar(D, EL, 4.25, CW, 0.42, m["title"], "navy", 13)
-    rows = m["rows"][:5]
-    better = [((r["a"] < r["b"]) if r.get("better", "low") == "low" else (r["a"] > r["b"])) for r in rows]
-    D.text(EL + 0.3, 4.72, 3.0, 0.26, [("◀ " + m.get("left", "") + "  ", {"face": M}), (f"{sum(better)} 项占优", {"face": B, "color": NAVY})],
-           size=10.5, color=NAVY)
-    D.text(ER - 3.3, 4.72, 3.0, 0.26, [(f"{len(rows) - sum(better)} 项占优", {"face": B, "color": RED}), ("  " + m.get("right", "") + " ▶", {"face": M})],
-           size=10.5, color=RED, align="r")
-    cx, half = (EL + ER) / 2, 3.9
-    for j, r in enumerate(rows):
-        y = 5.02 + j * 0.3
-        mx = max(r["a"], r["b"])
-        wa, wb = half * r["a"] / mx, half * r["b"] / mx
-        D.text(cx - 1.0, y, 2.0, 0.24, r["label"], size=10, color=NAVY_D, face=M, align="c", anchor="m")
-        grad(D.rect(cx - 1.05 - wa, y + 0.04, wa, 0.16, fill=NAVY), [(0, "2E5A94", 100), (100, "16365F", 100)], angle=0)
-        grad(D.rect(cx + 1.05, y + 0.04, wb, 0.16, fill=RED), GRAD_RED, angle=0)
-        D.text(cx - 1.05 - wa - 0.62, y, 0.57, 0.24, f'{r["a"]:g}', size=10, color=NAVY, face=B, align="r", anchor="m")
-        D.text(cx + 1.05 + wb + 0.05, y, 0.6, 0.24, f'{r["b"]:g}', size=10, color=RED, face=B, anchor="m")
-        if better[j]:
-            D.box_text(cx - 1.05 - wa - 1.05, y + 0.02, 0.4, 0.2, "优", NAVY, WHITE, 8.5, B, shape=MSO_SHAPE.ROUNDED_RECTANGLE, adj=0.5)
-        else:
-            D.box_text(cx + 1.05 + wb + 0.62, y + 0.02, 0.4, 0.2, "优", RED, WHITE, 8.5, B, shape=MSO_SHAPE.ROUNDED_RECTANGLE, adj=0.5)
 
 
 # =================================================================================== spec_table
@@ -220,51 +164,6 @@ def radar(D, s):
     findings(D, rx, 3.08, rw, 3.47, s.get("findings", []))
 
 
-# =================================================================================== matrix
-def matrix(D, s):
-    """2x2 matrix with axes; one row framed as a highlighted band; hero statistic + two findings on the right."""
-    frame(D, s)
-    ox, oy, qw, qh, g = 1.25, 1.3, 3.6, 2.3, 0.12
-    band = s.get("band")
-    if band:
-        by = oy + band.get("row", 1) * (qh + g)
-        b = D.rect(ox - 0.12, by - 0.12, 2 * qw + g + 0.24, qh + 0.24, fill=RED_T, line=RED, lw=1.25,
-                   shape=MSO_SHAPE.ROUNDED_RECTANGLE, adj=0.05, dash=DASH.DASH)
-        alpha(b, 70)
-    for k, q in enumerate(s["quads"][:4]):
-        cx_, cy_ = k % 2, k // 2
-        x, y = ox + cx_ * (qw + g), oy + cy_ * (qh + g)
-        tone = q.get("tone", "navy")
-        col = col_of(tone)
-        qd = wcard(D, x, y, qw, qh, tone)
-        grad(qd, [(0, "EAF0F7" if tone == "navy" else "FBEDEA", 100), (100, "FFFFFF", 100)], angle=45)
-        gcircle(D, x + 0.25, y + 0.28, 0.62, tone, icon=q.get("icon", "target"))
-        D.text(x + 1.02, y + 0.33, qw - 1.2, 0.5, q["title"], size=17, color=col, face=H, anchor="m")
-        D.text(x + 0.27, y + 1.1, qw - 0.5, 0.6, q.get("desc", ""), size=12, color=GREY, spacing=1.2)
-        D.line(x + 0.27, y + qh - 0.55, x + qw - 0.27, y + qh - 0.55, NAVY_B if tone == "navy" else RED_B, 0.5, DASH.DASH)
-        D.text(x + 0.27, y + qh - 0.48, qw - 0.5, 0.3, q.get("label", ""), size=10, color=GREY_M, face=M)
-    if band and band.get("label"):
-        chip(D, ox + 2 * qw + g - 2.75, oy + 2 * qh + g, 2.75, band["label"], "red", h=0.3, size=9.5)
-    ax = s.get("axes", {})
-    D.line(ox - 0.3, oy + 2 * qh + g + 0.42, ox + 2 * qw + g + 0.3, oy + 2 * qh + g + 0.42, NAVY, 1.5, arrow=True)
-    D.line(ox - 0.3, oy + 2 * qh + g + 0.42, ox - 0.3, oy - 0.1, NAVY, 1.5, arrow=True)
-    D.text(ox, oy + 2 * qh + g + 0.48, 2 * qw + g, 0.28, ax.get("x", ""), size=11, color=NAVY, face=M, align="c")
-    D.text(0.4, oy, 0.5, 2 * qh + g, ax.get("y", ""), size=11, color=NAVY, face=M, align="c", anchor="m", vert=True)
-    rx, rw = ER - 3.88, 3.88
-    h = s.get("hero")
-    if h:
-        hb = D.rect(rx, CARD_TOP, rw, 2.15, fill=RED)
-        grad(hb, GRAD_RED, angle=0); shadow(hb, color=RED, opacity=28, blur=10, dist=3)
-        if h.get("photo"):
-            D.photo(h["photo"], rx, 1.9, rw, 1.4, opacity=16, feather=0.32)
-        c = D.rect(rx + 0.25, 1.42, 0.9, 0.9, fill=WHITE, shape=MSO_SHAPE.OVAL); shadow(c, color=RED, opacity=30)
-        D.icon(h.get("icon", "home"), rx + 0.4, 1.57, 0.6, color=RED)
-        D.text(rx + 1.35, 1.25, 2.4, 0.85, [(h["value"], {}), (h.get("unit", ""), {"size": 20})], size=44, color=WHITE, face=H)
-        D.text(rx + 0.25, 2.42, rw - 0.4, 0.32, h.get("title", ""), size=15, color=WHITE, face=M)
-        D.text(rx + 0.25, 2.82, rw - 0.4, 0.3, h.get("sub", ""), size=11.5, color=ON_RED, face=M)
-    findings(D, rx, 3.5, rw, 3.05, s.get("findings", [])[:2], top_pad=0.55)
-
-
 # =================================================================================== butterfly
 def butterfly(D, s):
     """Mirrored bar chart of two groups across factors, difference pills, findings column."""
@@ -380,5 +279,4 @@ def persona(D, s):
         D.text(ix + 0.2, 6.2, iw - 0.4, 0.3, t["note"], size=10, color=GREY, align="c", hl={"face": M, "color": NAVY})
 
 
-LAYOUTS = {"versus": versus, "spec_table": spec_table, "radar": radar, "matrix": matrix,
-           "butterfly": butterfly, "persona": persona}
+LAYOUTS = {"spec_table": spec_table, "radar": radar, "butterfly": butterfly, "persona": persona}

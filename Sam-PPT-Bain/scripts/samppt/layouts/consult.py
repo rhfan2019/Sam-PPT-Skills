@@ -294,4 +294,315 @@ def hub(D, s):
     do_strip(D, s.get("strip"))
 
 
-LAYOUTS = {"chart_phases": chart_phases, "funnel": funnel, "hub": hub}
+def footnote(D, text, y=6.45):
+    """Thin rule + grey source / method note; closes consulting pages that have no framework strip."""
+    if text:
+        D.line(EL, y - 0.08, ER, y - 0.08, "BFBFBF", 0.75)
+        D.text(EL, y, CW, 0.22, text, size=8.5, color=GREY_M)
+
+
+def mini_bars(D, x, y, w, rows, step=0.3, lw=0.9, unit=""):
+    """Labelled horizontal bars for evidence modules: rows = [{label, value, tone: navy|red|mid}]."""
+    mx = max(r["value"] for r in rows)
+    bw = w - lw - 0.5
+    for k, r in enumerate(rows):
+        yy = y + k * step
+        c = {"red": RED, "navy": NAVY, "mid": NAVY_L}[r.get("tone", "navy")]
+        D.text(x, yy, lw - 0.08, 0.22, r["label"], size=9, color=GREY, align="r", anchor="m")
+        b = D.rect(x + lw, yy + 0.04, max(bw * r["value"] / mx, 0.06), 0.14, fill=c)
+        if r.get("tone", "navy") != "mid":
+            grad(b, GRAD_NAVY if c == NAVY else GRAD_RED, angle=0)
+        D.text(x + lw + bw * r["value"] / mx + 0.06, yy, 0.42, 0.22, f'{r["value"]:g}{unit}', size=9.5,
+               color=NAVY_M if c == NAVY_L else c, face=B, anchor="m")
+
+
+# =================================================================================== dual_charts
+SER_COLS = [NAVY, RED, NAVY_L, NAVY_M]
+SER_GRADS = {0: ("2E5A94", "16365F"), 1: ("C0503E", "8E2B1D")}
+
+
+def _stack_chart(D, p, x, y, w, h, plot):
+    """Stacked column / stacked area without legend: series are labelled directly at the right end.
+    Returns plot geometry (category x, stack tops, segment mid-points of the last category)."""
+    from .cards import nice_max
+    cats, series = p["categories"], p["series"]
+    n = len(cats)
+    names = list(series)
+    totals = [sum(v[i] for v in series.values()) for i in range(n)]
+    cd = CategoryChartData(); cd.categories = cats
+    for k, v in series.items():
+        cd.add_series(k, v)
+    col = p["type"] == "stacked_column"
+    ch = D.chart(XL_CHART_TYPE.COLUMN_STACKED if col else XL_CHART_TYPE.AREA_STACKED, cd, x, y, w, h)
+    chart_text(ch, 9)
+    lx, ty, lw_, th = plot
+    plot_layout(ch, lx, ty, lw_, th)
+    for i, ser in enumerate(ch.plots[0].series):
+        fill_series(ser, SER_COLS[i % 4])
+        if i in SER_GRADS:
+            ser_grad(ser, *SER_GRADS[i])
+    vmax, unit = nice_max(max(totals))
+    va = ch.value_axis
+    va.maximum_scale = vmax; va.minimum_scale = 0; va.major_unit = unit
+    if col:
+        ch.plots[0].gap_width = 70
+        series_lines(ch)
+        hide_val_axis(ch)
+        for i, ser in enumerate(ch.plots[0].series):
+            ser.data_labels.show_value = True
+            ser.data_labels.position = XL_LABEL_POSITION.CENTER
+            label_font(ser.data_labels, 9, WHITE if i < 2 else NAVY_D, face=M)
+            for j, v in enumerate(series[names[i]]):
+                if v < vmax * 0.045:
+                    hide_point_label(ser, j)
+    else:
+        gridlines(va); axis_line(va, show=False)
+    axis_line(ch.category_axis)
+    pl, pw, pt, ph = x + lx * w, lw_ * w, y + ty * h, th * h
+    px = [pl + (i + 0.5) * pw / n for i in range(n)] if col else [pl + pw * i / (n - 1) for i in range(n)]
+    yof = lambda v: pt + ph * (1 - v / vmax)
+    cum, mids = 0, []
+    for k in names:
+        v = series[k][-1]
+        mids.append(yof(cum + v / 2)); cum += v
+    return {"px": px, "py": [yof(t) for t in totals], "mids": mids, "names": names, "bw": pw / n * 100 / 170}
+
+
+def _end_labels(D, x, mids, names, tags=None, w=1.0):
+    """Series names written next to the last data point, in series colour; optional pill (growth, share)."""
+    ys = list(mids)
+    for k in range(1, len(ys)):           # keep labels at least one line apart
+        ys[k] = min(ys[k], ys[k - 1] - 0.27)
+    for k, (yy, n) in enumerate(zip(ys, names)):
+        c = SER_COLS[k % 4]
+        D.text(x, yy - 0.12, 0.62, 0.24, n, size=10, color=NAVY_M if c == NAVY_L else c, face=B, anchor="m")
+        if tags:
+            outline_pill(D, x + 0.48, yy - 0.12, w - 0.48, tags[k], "red" if k else "navy", h=0.24, size=9)
+
+
+def dual_charts(D, s):
+    """Annual structure (stacked columns + series lines + share pills) | monthly trend (stacked area,
+    direct labels + growth pills) | evidence column (growth KPIs, split of the increment)."""
+    frame(D, s)
+    z = s.get("zones", ["", "", ""])
+    L, Rp = s["left"], s["right"]
+    lx0, lw0 = EL, 5.15
+    rx0, rw0 = 5.75, 4.35
+    ex, ew = 10.4, ER - 10.4
+    zone(D, lx0, z[0], "navy", w=2.2)
+    zone(D, rx0, z[1], "navy", w=2.2)
+    if len(z) > 2:
+        zone(D, ex, z[2], "red", w=ew)
+    cy, chh = 2.42, 3.72
+    for x, w, p in ((lx0, lw0, L), (rx0, rw0, Rp)):
+        D.text(x, 2.1, w, 0.26, p["title"], size=10, color=NAVY, face=M, anchor="m")
+    # left: annual stacked columns
+    g = _stack_chart(D, L, lx0, cy, lw0, chh, (0.0, 0.07, 0.82, 0.85))
+    _end_labels(D, g["px"][-1] + g["bw"] / 2 + 0.08, g["mids"], g["names"])
+    co = L.get("callout")
+    if co:
+        i = co["at"]
+        callout(D, g["px"][i] - 2.45, cy + 0.02, 1.7, 0.42, g["px"][i] - 0.12, g["py"][i] + 0.03, co["text"], size=10)
+    row = L.get("pill_row")
+    if row:
+        gy = cy + chh + 0.04
+        for i, v in enumerate(row["values"]):
+            hot = v >= row.get("hot", 1e9)
+            outline_pill(D, g["px"][i] - 0.32, gy, 0.64, f'{v:g}{row.get("suffix", "")}', "red", h=0.26, size=9.5, filled=hot)
+        D.text(g["px"][-1] + 0.4, gy, lw0 - (g["px"][-1] + 0.4 - lx0), 0.26, "← " + row["label"], size=9, color=RED, face=M, anchor="m")
+    # right: monthly stacked area
+    g2 = _stack_chart(D, Rp, rx0, cy, rw0, chh, (0.09, 0.07, 0.67, 0.85))
+    _end_labels(D, g2["px"][-1] + 0.1, g2["mids"], g2["names"], Rp.get("end_tags"), w=rx0 + rw0 - g2["px"][-1] - 0.1)
+    co = Rp.get("callout")
+    if co:
+        i = co["at"]
+        callout(D, g2["px"][i] - 2.35, cy + 0.02, 1.85, 0.42, g2["px"][i] - 0.05, g2["py"][i] + 0.02, co["text"], size=10)
+    if Rp.get("end_caption"):
+        D.text(g2["px"][-1] + 0.1, min(g2["mids"]) - 0.62, rx0 + rw0 - g2["px"][-1] - 0.1, 0.24, Rp["end_caption"], size=8.5,
+               color=GREY_M, anchor="m")
+    # evidence column
+    ev = s.get("evidence", {})
+    y = 2.1
+    if ev.get("kpis"):
+        module_head(D, ex, y, ew, ev.get("kpi_title", "关键指标"))
+        for k, kp in enumerate(ev["kpis"][:3]):
+            kpi_box(D, ex, y + 0.4 + k * 0.66, ew, 0.58, kp["value"], kp.get("unit", ""), kp["label"], kp.get("up", True),
+                    kp.get("tone", "red"))
+        y += 0.4 + 3 * 0.66 + 0.2
+    sp = ev.get("split")
+    if sp:
+        module_head(D, ex, y, ew, sp["title"], "red")
+        y += 0.42
+        x0, tot = ex, sum(pt_["value"] for pt_ in sp["parts"])
+        for i, pt_ in enumerate(sp["parts"]):
+            pw_ = ew * pt_["value"] / tot
+            b = D.rect(x0, y, pw_, 0.3, fill=NAVY if i == 0 else RED)
+            grad(b, GRAD_NAVY if i == 0 else GRAD_RED, angle=0)
+            D.text(x0 + 0.08, y, pw_ - 0.1, 0.3, f'{pt_["label"]} {pt_["value"]:g}%', size=9, color=WHITE, face=M, anchor="m")
+            if pt_.get("note"):
+                D.text(x0 + 0.02, y + 0.34, pw_ - 0.04, 0.2, pt_["note"], size=8.5, color=NAVY if i == 0 else RED, face=M)
+            x0 += pw_
+        if sp.get("caption"):
+            D.text(ex, y + 0.7, ew, 0.5, sp["caption"], size=9, color=GREY, spacing=1.1, hl={"face": B, "color": RED})
+    footnote(D, s.get("note"), y=6.68)
+
+
+# =================================================================================== versus
+def versus(D, s):
+    """Two mirrored wings (side name, pros / cons as open items, photo) around a centre metric duel;
+    items carry the number of the metric row that proves them. Framework strip closes the page."""
+    frame(D, s)
+    sides = s["sides"][:2]
+    z = s.get("zones") or [sd.get("claim", "") for sd in sides]
+    zone(D, EL, z[0], "navy", w=2.6)
+    zone(D, ER - 2.6, z[1], "red", w=2.6)
+    cx = (EL + ER) / 2
+    gcircle(D, cx - 0.45, 1.58, 0.9, "red", text="VS", size=20, ring=3)
+    ww = 3.8                                   # wing width
+    for i, sd in enumerate(sides):
+        tone = sd.get("tone", "navy" if i == 0 else "red")
+        col = col_of(tone)
+        left = i == 0
+        x0 = EL if left else ER - ww
+        al = "l" if left else "r"
+        # wing header: icon circle + side name, rule underneath
+        ix = x0 if left else ER - 0.6
+        gcircle(D, ix, 2.2, 0.6, tone, icon=sd.get("icon", "battery"), ring=1.5)
+        D.text(x0 + (0.75 if left else 0), 2.2, ww - 0.75, 0.6, sd["name"], size=18, color=col, face=H, align=al, anchor="m")
+        D.line(x0, 2.92, x0 + ww, 2.92, NAVY_B if left else RED_B, 0.75)
+        for k, (head, items, ic, icol) in enumerate((("优势", sd.get("pros", []), "check", col),
+                                                       ("劣势", sd.get("cons", []), "warn", GREY_M))):
+            gy = 3.08 + k * 0.92
+            chip(D, x0 if left else ER - 0.62, gy + 0.05, 0.62, head, tone if k == 0 else "navy", h=0.28, size=10)
+            for j, it in enumerate(items[:2]):
+                it = it if isinstance(it, dict) else {"text": it}
+                yy = gy + j * 0.4
+                tx = x0 + 0.78 if left else x0 + 0.3
+                if left:
+                    D.icon(ic, tx, yy + 0.07, 0.24, color=icol)
+                    D.text(tx + 0.32, yy, ww - 1.45, 0.38, it["text"], size=11, color=GREY, anchor="m")
+                else:
+                    D.icon(ic, ER - 0.78 - 0.24, yy + 0.07, 0.24, color=icol)
+                    D.text(x0 + 0.35, yy, ww - 1.45, 0.38, it["text"], size=11, color=GREY, anchor="m", align="r")
+                if it.get("ref"):
+                    bx = x0 + ww - 0.26 if left else x0
+                    num_badge(D, bx, yy + 0.06, 0.26, f'{it["ref"]:02d}', tone)
+        if sd.get("photo"):
+            pw_ = sd.get("photo_w", 2.0)
+            D.photo_fit(sd["photo"], x0 + (0 if left else ww - pw_), 4.95, pw_)
+    # centre: metric duel
+    m = s.get("metrics")
+    if m:
+        c0, c1 = EL + ww + 0.3, ER - ww - 0.3
+        rows = m["rows"][:5]
+        better = [((r["a"] < r["b"]) if r.get("better", "low") == "low" else (r["a"] > r["b"])) for r in rows]
+        module_head(D, cx - 1.3, 2.65, 2.6, m["title"], "navy")
+        D.text(c0, 2.65, 1.0, 0.24, f"{sum(better)} 项占优", size=10, color=NAVY, face=B)
+        D.text(c1 - 1.0, 2.65, 1.0, 0.24, f"{len(rows) - sum(better)} 项占优", size=10, color=RED, face=B, align="r")
+        top, step = 3.08, 0.56
+        D.line(cx, top - 0.05, cx, top + len(rows) * step - 0.05, NAVY_B, 0.75, DASH.DASH)
+        half = (c1 - c0) / 2 - 0.55
+        for j, r in enumerate(rows):
+            y = top + j * step
+            mx = max(r["a"], r["b"])
+            lab = f'{j + 1:02d}  ' + r["label"]
+            D.rect(cx - 1.25, y - 0.01, 2.5, 0.26, fill=WHITE)
+            D.text(cx - 1.25, y, 2.5, 0.24, [(f'{j + 1:02d}  ', {"face": H, "color": RED}), (r["label"], {})],
+                   size=9.5, color=NAVY_D, face=M, align="c", anchor="m")
+            yb = y + 0.29
+            for side, v, win in ((0, r["a"], better[j]), (1, r["b"], not better[j])):
+                bw = max(half * v / mx, 0.05)
+                c = (NAVY, RED)[side] if win else (NAVY_L, RED_L)[side]
+                bx = cx - 0.04 - bw if side == 0 else cx + 0.04
+                b = D.rect(bx, yb, bw, 0.17, fill=c)
+                if win:
+                    grad(b, [(0, "2E5A94", 100), (100, "16365F", 100)] if side == 0 else GRAD_RED, angle=0)
+                vx = bx - 0.5 if side == 0 else bx + bw + 0.05
+                D.text(vx, yb - 0.04, 0.45, 0.25, f"{v:g}", size=10.5 if win else 9.5, color=(NAVY, RED)[side] if win else GREY_M,
+                       face=H if win else R, align="r" if side == 0 else "l", anchor="m")
+        if m.get("note"):
+            D.text(c0, top + len(rows) * step, c1 - c0, 0.22, m["note"], size=8, color=GREY_M, align="c")
+    do_strip(D, s.get("strip"))
+
+
+# =================================================================================== matrix
+def matrix(D, s):
+    """Open 2x2 matrix (tinted quadrants, numbered, one row framed as the highlighted band) on the left;
+    hero statistic with its split bar and two evidence modules on the right, linked to the band."""
+    frame(D, s)
+    z = s.get("zones", ["", ""])
+    rx = 8.0
+    zone(D, EL, z[0], "navy", w=2.2)
+    zone(D, rx, z[1], "red", w=2.2)
+    ax_ = s.get("axes", {})
+    mx0, mx1, my0, my1, g = 0.9, 7.6, 2.2, 6.0, 0.08
+    qw, qh = (mx1 - mx0 - g) / 2, (my1 - my0 - g) / 2
+    xa = mx0 - 0.12
+    D.line(xa, my1 + 0.1, mx1 + 0.05, my1 + 0.1, NAVY, 1.5, arrow=True)
+    D.line(xa, my1 + 0.1, xa, my0 - 0.08, NAVY, 1.5, arrow=True)
+    D.text(mx0, my1 + 0.15, mx1 - mx0, 0.26, ax_.get("x", ""), size=10.5, color=NAVY, face=M, align="c", anchor="m")
+    D.text(EL, my0 + 0.4, 0.3, my1 - my0 - 0.8, ax_.get("y", ""), size=10.5, color=NAVY, face=M, align="c", anchor="m", vert=True)
+    lo, hi = ax_.get("ends", ["低", "高"])
+    D.text(mx0, my1 + 0.15, 0.4, 0.26, lo, size=9.5, color=GREY_M, face=M, anchor="m")
+    D.text(mx1 - 0.4, my1 + 0.15, 0.4, 0.26, hi, size=9.5, color=GREY_M, face=M, align="r", anchor="m")
+    D.text(EL, my0 - 0.02, 0.3, 0.26, hi, size=9.5, color=GREY_M, face=M, align="c", anchor="m")
+    D.text(EL, my1 - 0.26, 0.3, 0.26, lo, size=9.5, color=GREY_M, face=M, align="c", anchor="m")
+    band = s.get("band")
+    for k, q in enumerate(s["quads"][:4]):
+        x, y = mx0 + (k % 2) * (qw + g), my0 + (k // 2) * (qh + g)
+        tone = q.get("tone", "navy")
+        col = col_of(tone)
+        qd = D.rect(x, y, qw, qh, fill=NAVY_T)
+        grad(qd, [(0, "E6EDF6" if tone == "navy" else "F9E6E2", 100), (100, "FAFBFD" if tone == "navy" else "FEF9F8", 100)], angle=45)
+        gcircle(D, x + 0.22, y + 0.22, 0.6, tone, icon=q.get("icon", "target"), ring=1.5)
+        num_badge(D, x + 0.62, y + 0.14, 0.26, f"{k + 1:02d}", tone)
+        D.text(x + 0.98, y + 0.14, qw - 1.1, 0.4, q["title"], size=17, color=col, face=H, anchor="m")
+        if q.get("label"):
+            tag(D, x + 0.98, y + 0.56, 1.4, q["label"], tone, h=0.26, size=9.5)
+        D.line(x + 0.22, y + 0.98, x + qw - 0.22, y + 0.98, NAVY_B if tone == "navy" else RED_B, 0.5, DASH.DASH)
+        D.text(x + 0.22, y + 1.0, qw - 0.44, qh - 1.0, q.get("desc", ""), size=12.5, color=GREY, spacing=1.15, anchor="m")
+    if band:
+        by = my0 + band.get("row", 1) * (qh + g)
+        D.rect(mx0 - 0.06, by - 0.06, mx1 - mx0 + 0.12, qh + 0.12, line=RED, lw=1.5, dash=DASH.DASH,
+               shape=MSO_SHAPE.ROUNDED_RECTANGLE, adj=0.04)
+        if band.get("label"):
+            chip(D, mx1 - 1.75, by - 0.2, 1.75, band["label"], "red", h=0.28, size=9.5)
+    # right wing: hero number + its split bar
+    h = s.get("hero")
+    if h:
+        gcircle(D, rx, 2.25, 0.82, "red", icon=h.get("icon", "home"), ring=2)
+        D.text(rx + 0.95, 2.12, 1.9, 0.95, [(h["value"], {}), (h.get("unit", ""), {"size": 20})], size=44, color=RED, face=H, anchor="m")
+        D.text(rx + 2.7, 2.28, ER - rx - 2.7, 0.32, h.get("title", ""), size=14, color=NAVY, face=B, anchor="m")
+        D.text(rx + 2.7, 2.62, ER - rx - 2.7, 0.28, h.get("sub", ""), size=11, color=GREY, anchor="m")
+    sp = s.get("split")
+    if sp:
+        y = 3.3
+        if sp.get("title"):
+            module_head(D, rx, y, ER - rx, sp["title"], "red")
+            y += 0.42
+        x0, tot, w_ = rx, sum(p["value"] for p in sp["parts"]), ER - rx
+        for i, p in enumerate(sp["parts"]):
+            pw_ = w_ * p["value"] / tot
+            tone = p.get("tone", "red" if i == 0 else "navy")
+            b = D.rect(x0, y, pw_, 0.32, fill=col_of(tone))
+            grad(b, GRAD_RED if tone == "red" else GRAD_NAVY, angle=0)
+            lab = p["label"] + (f'  {p["value"]:g}%' if p.get("show_value", True) else "")
+            D.text(x0 + 0.1, y, pw_ - 0.2, 0.32, lab, size=10, color=WHITE, face=M, anchor="m")
+            if p.get("note"):
+                D.text(x0 + 0.02, y + 0.36, pw_ - 0.04, 0.22, p["note"], size=9, color=col_of(tone), face=M, anchor="m")
+            x0 += pw_
+        if band:
+            by = my0 + band.get("row", 1) * (qh + g)
+            dot_line(D, rx - 0.02, y + 0.16, mx1 + 0.08, by + qh / 2, RED, dot_start=True)
+    mods = s.get("evidence", [])[:2]
+    if mods:
+        mw = (ER - rx - 0.25 * (len(mods) - 1)) / len(mods)
+        for k, md in enumerate(mods):
+            x = rx + k * (mw + 0.25)
+            module_head(D, x, 4.45, mw, md["title"], md.get("tone", "navy"))
+            mini_bars(D, x, 4.88, mw, md["rows"], step=0.36, lw=md.get("label_w", 0.85), unit=md.get("unit", ""))
+    footnote(D, s.get("note"), y=6.55)
+
+
+LAYOUTS = {"chart_phases": chart_phases, "funnel": funnel, "hub": hub,
+           "dual_charts": dual_charts, "versus": versus, "matrix": matrix}
