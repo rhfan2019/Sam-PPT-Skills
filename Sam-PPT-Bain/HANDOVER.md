@@ -5,9 +5,10 @@
 ## 1. 现状
 
 - **架构**：薄外壳 + ppt-master。2026-10-21 用户看过 ppt-master 试点（P4/P13/P17）后认可方向（"算是非常不错了，看起来这个方向是对的"），要求清空旧引擎、按薄外壳全力改造。旧的 python-pptx 自研引擎（build.py / samppt / kit.pptx / regress.py）已全部删除，**不要恢复，也不要再写自己的排版引擎**。
-- **模板**：`template/` 是 ppt-master 的 Deck（`sam-bain`）+ Style（`sam-bain-consulting`）工作区，6 个原型，通过 ppt-master 模板检查与预览导出。正文两页来自 参考模板；封面、目录、章节、结束页为同一视觉语言的新设计，**尚未经用户确认**。
+- **模板**：`template/` 是 ppt-master 的 Deck（`sam-bain`）+ Style（`sam-bain-consulting`）工作区，6 个原型，通过 ppt-master 模板检查与预览导出。正文两页来自 参考模板；封面、目录、章节、结束页为同一视觉语言的新设计，**2026-10-21 经用户确认为模板基线**（渲染图 `references/approved/template-*.png`）。
 - **用户确认过的效果**：
   - 旧引擎的六张咨询版样张：`references/approved/nev-p04/05/07/10/13/17.png`；
+  - 模板 4 个新原型（封面、目录、章节页、结束页）：`references/approved/template-*.png`（2026-10-21 确认）；
   - ppt-master 试点三页：`references/exemplars/trend-phases / funnel / hub`（用户的评价是"算是非常不错了"）。
   - 除此之外的任何页面都**不是基线**，不能当作"用户满意"。
 
@@ -36,7 +37,7 @@ Sam-PPT-Bain/
 │   ├── rules.md             用户硬规则 + 咨询感来源 + 自检清单
 │   ├── page-patterns.md     坐标体系、构件尺寸、20 种页型做法、ppt-master 约束
 │   ├── exemplars/           已验收的 ppt-master 试点页（SVG + PNG），写新页的起点
-│   └── approved/            旧引擎时期用户确认的六张样张（视觉目标）
+│   └── approved/            用户确认的样张：旧引擎六张咨询页 + 模板 4 个新原型（template-*.png）
 ├── scripts/
 │   ├── sam_bain.py          new / photos / icons / check / finish
 │   ├── fix_cjk_fonts.py     导出后把中文槽位改回同字重 OPPOSans（ppt-master 不认识 OPPOSans）
@@ -55,4 +56,3 @@ Sam-PPT-Bain/
 
 1. 用 20 页新能源大纲完整跑一遍（第二阶段），请用户逐页判断；把用户确认的页面加入 `references/exemplars/`。
 2. 再用一份**不同行业**的大纲做端到端测试，检验 page-patterns 的通用性。
-3. 封面 / 目录 / 章节 / 结束页的设计请用户确认。
