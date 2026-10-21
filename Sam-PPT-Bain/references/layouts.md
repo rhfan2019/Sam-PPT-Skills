@@ -32,14 +32,14 @@
 - `nodes` 2–6：`{name(≤ 8 字), metric(≤ 5 字), group(标签 ≤ 4 字), desc(≤ 14 字), icon, tone}`
 - `evidence_left / evidence_right`：`{type: split_bar|bars|kpis, title, ...}`
 
-### dual_charts — 三等栏：年度结构 | 月度走势 | 增长拆解（咨询构图，样张待确认）
-三栏等宽（`cols(3, 0.4)`），栏间细竖线分隔，区块标签与栏同宽。左：堆积柱 + 段间虚线 + 最新年份浅红底带 + 末端直接标注 + 份额胶囊行；中：堆积面积（白色接缝）+ 末月虚线 + 末端标注与增幅胶囊；右：3 个指标框 + 增量拆分条。三栏底部各有一行微型说明，共用同一条基线。
+### dual_charts — 三栏：年度结构 | 月度走势 | 增长拆解（咨询构图，样张待确认）
+栏宽按内容自动分配（每个类目所需宽度 + 末端标注列；证据栏固定 2.9″，可用 `widths[3]` 覆盖），栏间 0.4″ 留白 + 细竖线，区块标签与栏同宽。左：堆积柱 + 段间虚线 + 最新年份浅红底带 + 末端直接标注 + 份额胶囊行；中：堆积面积（白色接缝）+ 末月虚线 + 末端标注与增幅胶囊；右：3 个指标框 + 增量拆分条。三栏底部各有一行微型说明，共用同一条基线。
 - `zones[左, 中, 右]`；`left / right`：`{title, type: stacked_column|stacked_area, categories(左 ≤ 6，右 ≤ 9), series{名: 值[]}(≤ 3 个系列), callout{at, text(≤ 10 字)}, caption(≤ 24 字)}`
 - `left.pill_row{label(≤ 4 字), values, suffix, hot}`；`right.end_tags[每个系列一个 ≤ 5 字]`
 - `evidence{kpi_title, kpis ≤ 3 {value, unit, label(≤ 14 字), tone}, split{title, parts[2]{label, value(%), note}, caption}, caption}`
 
 ### versus — 三栏行对齐：左翼 | 指标对决 | 右翼（咨询构图，样张待确认）
-VS 徽章压在区块标签行；表头：图标圆 + 路线名 + "N 项占优"胶囊，下接各自颜色的粗线；下面 5 行浅色单元格（栏间留白、行间留白），每行左右两翼的优势/劣势条目与中间的指标对齐（条目 `ref` = 指标行号，无 `ref` 的条目放进空行）；占优一方实色渐变 + 粗体数值；底部框架条。
+VS 徽章压在区块标签行；表头：图标圆 + 路线名 + "N 项占优"胶囊，下接各自颜色的粗线；三栏之间用细竖线分隔（与 dual_charts 一致），行间用浅灰虚线，不加底色；每行左右两翼的优势/劣势条目与中间的指标对齐（条目 `ref` = 指标行号，无 `ref` 的条目放进空行）；占优一方实色渐变 + 粗体数值；底部框架条。
 - `zones[左, 右]`（默认取 `claim`），`sides` 2：`{name(≤ 14 字符), tone, icon, pros[≤ 2], cons[≤ 2]}`；条目为字符串或 `{text(≤ 14 字), ref}`
 - `metrics{title, left, right, rows ≤ 5 {label(≤ 10 字), a, b, better: low|high}}`（占优项数自动算）
 - `strip`：同咨询版式；格子第二行留空 `["有家充", ""]` 时显示为单行大字

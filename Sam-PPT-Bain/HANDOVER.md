@@ -107,7 +107,7 @@ Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`。
 
 ## 7. 待办与已知问题（建议的下一步顺序）
 
-1. **把其余版式升级成咨询风格**（最大的一项）。2026-10-21 第二批：`dual_charts`、`versus`、`matrix` 已改为咨询构图（代码在 `layouts/consult.py`，样张 `examples/consulting-samples-2.json`，对应 nev-report 第 5、7、10 页），第 1 轮评审意见（P5 栏宽不均/无分隔/图表不够精致、底部"注"与页脚冲突；P7 栏和行不明显）已改，**等待第 2 轮评审**——用户确认后 `--approve consulting-samples-2:1,2,3;nev-report:5,7,10`，否则按反馈修改。之后再铺开其余 14 种（cover、contents 等开篇页可能不需要论点条，先问用户）。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`。
+1. **把其余版式升级成咨询风格**（最大的一项）。2026-10-21 第二批：`dual_charts`、`versus`、`matrix` 已改为咨询构图（代码在 `layouts/consult.py`，样张 `examples/consulting-samples-2.json`，对应 nev-report 第 5、7、10 页），第 1 轮评审意见（P5 栏宽不均/无分隔/图表不够精致、底部"注"与页脚冲突；P7 栏和行不明显）已改，第 2 轮意见（P7 去掉单元格底色改分割线；P5 栏宽按内容分配、保留细竖线）已改，**等待第 3 轮评审**——用户确认后 `--approve consulting-samples-2:1,2,3;nev-report:5,7,10`，否则按反馈修改。之后再铺开其余 14 种（cover、contents 等开篇页可能不需要论点条，先问用户）。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`。
 2. **用一份新的大纲做端到端测试**（不同行业、不同页数），检验 SKILL.md 的规划指引和各版式容量上限是否合理；容量不够或字段不顺手就改版式。
 3. **文字溢出检查是估算**（按字宽估行数）。可考虑用 PowerPoint COM 读取实际文本框边界做精确检查。
 4. **重叠检查**还没有（比如标注气泡压住数据标签只能靠看图）。

@@ -397,17 +397,27 @@ def dual_charts(D, s):
     frame(D, s)
     z = s.get("zones", ["", "", ""])
     L, Rp = s["left"], s["right"]
-    (c1, w), (c2, _), (c3, _) = cols(3, 0.4)
+    # column widths follow the content: each chart needs room per category plus its end-label column,
+    # the evidence column a fixed width; `widths` in deck.json overrides
+    lab_w, tag_w, gut = 0.68, 1.22, 0.4
+    widths = s.get("widths")
+    if not widths:
+        w3 = 2.9
+        need = [lab_w + len(L["categories"]) * 0.62, tag_w + 0.4 + len(Rp["categories"]) * 0.36]
+        k = (CW - 2 * gut - w3) / sum(need)
+        widths = [need[0] * k, need[1] * k, w3]
+    w1, w2, w3 = widths
+    c1, c2, c3 = EL, EL + w1 + gut, ER - w3
     top, bot, cap_y = 2.12, 6.5, 6.3
-    for xd in (c1 + w + 0.2, c2 + w + 0.2):
+    for xd in (c2 - gut / 2, c3 - gut / 2):
         D.line(xd, top, xd, bot, GREY_L, 0.75)
-    for x, t, tone in ((c1, z[0], "navy"), (c2, z[1], "navy"), (c3, z[2] if len(z) > 2 else "", "red")):
+    for x, w, t, tone in ((c1, w1, z[0], "navy"), (c2, w2, z[1], "navy"), (c3, w3, z[2] if len(z) > 2 else "", "red")):
         zone(D, x, t, tone, w=w)
     cy, chh = 2.5, 3.42
-    for x, p in ((c1, L), (c2, Rp)):
+    for x, w, p in ((c1, w1, L), (c2, w2, Rp)):
         D.text(x, top, w, 0.26, p["title"], size=10, color=NAVY, face=M, anchor="m")
     # column 1: annual stacked columns, latest year on a tinted band
-    lab_w = 0.68
+    w = w1
     plot = (0.0, 0.08, (w - lab_w) / w, 0.84)
     pl, pw = c1, w - lab_w
     n = len(L["categories"])
@@ -429,7 +439,7 @@ def dual_charts(D, s):
         D.text(pl + pw + 0.04, gy, lab_w, 0.26, row["label"], size=9, color=RED, face=M, anchor="m")
     caption(D, c1, cap_y, w, L.get("caption"))
     # column 2: monthly stacked area, last month marked
-    tag_w = 1.22
+    w = w2
     plot = (0.1, 0.08, (w - tag_w) / w - 0.1, 0.84)
     g2 = _stack_chart(D, Rp, c2, cy, w, chh, plot)
     xl = g2["px"][-1]
@@ -441,6 +451,7 @@ def dual_charts(D, s):
         callout(D, g2["px"][i] - 2.3, cy + 0.06, 1.8, 0.4, g2["px"][i] - 0.05, g2["py"][i] + 0.02, co["text"], size=10)
     caption(D, c2, cap_y, w, Rp.get("caption"))
     # column 3: evidence
+    w = w3
     ev = s.get("evidence", {})
     y = top
     if ev.get("kpis"):
@@ -504,11 +515,12 @@ def versus(D, s):
     D.line(c0, hy + hh + 0.06, c1, hy + hh + 0.06, GREY_M, 1.5)
     # row grid
     top, pitch, chh = hy + hh + 0.18, 0.6, 0.54
-    tints = ("F1F5FA", "F6F7F9", "FBF2F0")
-    for j in range(nr):
-        y = top + j * pitch
-        for x, w_, t in ((EL, ww, tints[0]), (c0, c1 - c0, tints[1]), (ER - ww, ww, tints[2])):
-            D.rect(x, y, w_, chh, fill=t)
+    for xd in (c0 - gap / 2, c1 + gap / 2):                     # column dividers, as on dual_charts
+        D.line(xd, hy, xd, top + nr * pitch - 0.06, GREY_L, 0.75)
+    for j in range(1, nr):                                      # row hairlines carry the eye across
+        y = top + j * pitch - 0.03
+        for x, w_ in ((EL, ww), (c0, c1 - c0), (ER - ww, ww)):
+            D.line(x, y, x + w_, y, GREY_L, 0.5, DASH.DASH)
     # wing items placed on the row of the metric they refer to
     for i, sd in enumerate(sides):
         tone = sd.get("tone", "navy" if i == 0 else "red")
