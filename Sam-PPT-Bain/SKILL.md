@@ -76,5 +76,5 @@ python "$SKILL_DIR/scripts/build.py" deck.json
 ## 扩展与维护
 
 - 新增版式：在 `scripts/samppt/layouts/` 的模块里写函数并加入该模块的 `LAYOUTS`，只用 `tokens` 常量和 `components` 组件；坐标以 `EL/ER/CW` 和 `cols()` 推算，不写散落的边距数字。然后在 `references/layouts.md` 补一节，在 `examples/` 加一页，跑一次回归。
-- 回归：改动组件或版式后运行 `python scripts/regress.py`，与 `tests/baseline/` 逐像素对比；确认变化有意后 `--update`。
+- 回归：改动组件或版式后运行 `python scripts/regress.py`。用户确认过的页面（`tests/baseline/STATUS.json` 中的 approved）一旦变化就失败，必须给用户看并得到确认后才能 `--update-approved`；其余页面只是临时快照，变化用 `--update` 刷新。只有用户确认了效果，才能用 `--approve` 把页面转为 approved。
 - 换模板素材：`python scripts/make_kit.py <参考模板> assets/kit.pptx`（图标、图片清单在脚本顶部）。

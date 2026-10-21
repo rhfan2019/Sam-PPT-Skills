@@ -4,7 +4,9 @@
 
 ## 1. 一句话现状
 
-Sam-PPT-Bain 能把一份结构化的 `deck.json` 按 参考模板 模板风格生成可编辑 PPTX，含 20 种版式、每次运行独立目录、自动检查 + PowerPoint 渲染自检 + 像素级回归。用 20 页新能源汽车测试大纲完整跑通，自动检查 0 问题，回归基线已提交。
+Sam-PPT-Bain 能把一份结构化的 `deck.json` 按 参考模板 模板风格生成可编辑 PPTX，含 20 种版式、每次运行独立目录、自动检查 + PowerPoint 渲染自检 + 像素级回归。用 20 页新能源汽车测试大纲能完整跑通（自动检查 0 问题，仅说明没有越界/溢出等机械错误）。
+
+**效果上，用户只确认了 3 页**：咨询版的 P4（chart_phases）、P13（funnel）、P17（hub）。**其余 17 页是精修卡片风格，用户明确表示未达预期**，不能当作标准参考，也不要据此推断"用户满意"。
 
 **还没做到的**：17 种版式仍是"精修卡片风格"，只有 3 种是用户确认过的"咨询风格"；从大纲到 deck.json 这一步靠 Claude 手写，没有程序辅助。详见第 7 节待办。
 
@@ -40,10 +42,10 @@ Sam-PPT-Bain/
 │   ├── outlines/nev-report-outline.md   测试大纲（20 页）
 │   ├── nev-report.json                  由该大纲写成的 deck.json（覆盖全部 20 种版式）
 │   └── consulting-samples.json          用户确认过的 3 张咨询版样张（P4/P13/P17）
-├── tests/baseline/             回归基线渲染图（960×540）
+├── tests/baseline/             回归渲染图（960×540）；STATUS.json 标明哪些页是用户确认过的（approved），其余只是临时快照（provisional）
 └── scripts/
     ├── build.py                入口：deck.json → runs/run-*/（pptx、render/、contact.png、qa.md）
-    ├── regress.py              回归：重建 examples、与基线逐像素对比；--update 接受新基线
+    ├── regress.py              回归：重建 examples、逐像素对比；approved 页变化即失败，provisional 页变化只提示
     ├── render.ps1              用真实 PowerPoint 逐页导出 PNG
     ├── make_kit.py             从 参考模板 重建 assets/kit.pptx
     └── samppt/
@@ -64,7 +66,9 @@ python scripts/build.py examples/nev-report.json
 python scripts/build.py deck.json --run runs/run-xxxxxxxx-xxxxxx-xxx
 # 回归（改代码后必跑）
 python scripts/regress.py
-python scripts/regress.py --update      # 看过渲染图、确认变化是有意的之后
+python scripts/regress.py --update                       # 刷新临时快照（provisional）
+python scripts/regress.py --approve nev-report:5,6         # 用户确认这些页的效果后，转为 approved
+python scripts/regress.py --update-approved nev-report:4   # 用户确认了对已确认页的修改
 # 重建素材包
 python scripts/make_kit.py "参考模板" assets/kit.pptx
 ```
@@ -76,7 +80,11 @@ Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`。
 1. **端到端测试**：拿 `examples/outlines/nev-report-outline.md`（或用户给的新大纲），按 `SKILL.md` 从头走一遍——规划页面、写 deck.json、build、看 qa.md、看 contact.png 和每页渲染图。这能同时测"大纲→deck.json"的指引是否够用。
 2. **自动检查**：`qa.md` 必须 0 问题；PowerPoint 渲染失败 = 文件损坏。`qa.py` 已用故意出错的样例验证过能抓住越界、溢出、过宽。
 3. **视觉检查**：按 `references/qa-checklist.md`。用户最在意：对齐（同行中线、同列边缘）、不越界、信息密度、不重复、深浅对比。
-4. **回归**：`regress.py` 对比 `tests/baseline/`。有变化先看渲染图，确认是有意的再 `--update`，基线和代码一起提交。
+4. **回归**：`regress.py` 对比 `tests/baseline/`，按 `STATUS.json` 区分两类页面：
+   - **approved（已确认）**：目前只有 consulting-samples 的 1–3 页和 nev-report 的第 4、13、17 页。它们一旦变化，回归就失败。必须先把渲染图给用户看，用户确认后才能 `--update-approved <deck>:<页码>`。
+   - **provisional（临时快照）**：其余 17 页。只用来发现"意外"变化，效果本身未被认可，升级时本来就该变。变化会列出来供查看，不算失败；确认是有意的改动后用 `--update` 刷新快照。
+   - 用户确认了新页面的效果后，用 `--approve <deck>:<页码>` 把它转为 approved，并在 STATUS.json 的说明里写上确认日期。
+   - **绝不能自己把页面标成 approved**，只有用户说"可以了"才行。
 5. **图标着色自检**：动了 `deck._recolor` 时，把 27 个图标统一着成一种颜色渲染一遍（见 design-rules 第 14 条）。
 
 ## 6. 迭代历史与用户的判断标准（很重要）
@@ -99,7 +107,7 @@ Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`。
 
 ## 7. 待办与已知问题（建议的下一步顺序）
 
-1. **把其余 17 种版式升级成咨询风格**（最大的一项）。目前只有 `chart_phases`、`funnel`、`hub` 有论点条 + 区块标签 + 框架条；其他版式没有 `thesis` 字段、内容从 1.15″ 开始。建议：先挑 2–3 个（如 `dual_charts`、`matrix`、`versus`）做样张给用户确认，再铺开。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`。
+1. **把其余 17 种版式升级成咨询风格**（最大的一项）。目前只有 `chart_phases`、`funnel`、`hub` 有论点条 + 区块标签 + 框架条；其他版式没有 `thesis` 字段、内容从 1.15″ 开始。建议：先挑 2–3 个（如 `dual_charts`、`matrix`、`versus`）做样张给用户确认，再铺开。每改一个版式都更新 `layouts.md`、`examples/nev-report.json`，跑回归并 `--update`（刷新临时快照）；用户确认样张后再 `--approve` 对应页码。
 2. **用一份新的大纲做端到端测试**（不同行业、不同页数），检验 SKILL.md 的规划指引和各版式容量上限是否合理；容量不够或字段不顺手就改版式。
 3. **文字溢出检查是估算**（按字宽估行数）。可考虑用 PowerPoint COM 读取实际文本框边界做精确检查。
 4. **重叠检查**还没有（比如标注气泡压住数据标签只能靠看图）。

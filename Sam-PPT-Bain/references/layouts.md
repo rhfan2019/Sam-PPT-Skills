@@ -6,6 +6,8 @@
 
 ## 一、咨询版式（模板第 10 页结构：论点条 → 区块标签 → 主图两翼 → 证据 → 框架条）
 
+> **状态：已经用户确认（approved）。** 这 3 种是目前唯一达到预期效果的版式。
+
 信息密度最高、最有"咨询感"，**优先使用**。共有字段：
 - `thesis`：全宽深蓝论点条，一句话说清这页的 so-what（≤ 40 字）
 - `zones`：两个区块标签 `[左, 右]`（各 ≤ 8 字）
@@ -31,6 +33,8 @@
 - `evidence_left / evidence_right`：`{type: split_bar|bars|kpis, title, ...}`
 
 ## 二、卡片与图表版式
+
+> **状态：未达预期（provisional）。** 以下 17 种是精修卡片风格，能用但用户反馈效果不够，待逐个升级为咨询构图（见 HANDOVER.md 第 7 节）。不要把它们当作风格标准参考。
 
 ### cover — 封面
 `label, title_lines[2 行，每行 ≤ 10 字], subtitle, chips[≤3]{text, icon, tone}, byline, note, hero{main[值,说明], red[值,单位,说明], white[值,说明]}, photo, background`
