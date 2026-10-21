@@ -17,7 +17,9 @@ description: 把用户给的 PPT 大纲按 参考模板 模板的贝恩 / 咨询
 
 1. `references/rules.md` —— 用户的硬规则（不加词、推算值要列出、对齐与边界、只有用户能确认样张）。
 2. `references/page-patterns.md` —— 坐标体系、常用构件的精确尺寸、页型做法。
-3. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。正文页可参考 `examples/nev-case/pilot-pages/` 的三张试点页（SVG + PNG，用户确认过效果）：只借它的写法（`<defs>`、构件尺寸、分组与 bounds），**不要搬用里面的文字、数据和汽车图片**——那是新能源汽车案例的内容。
+3. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。
+
+**独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲和上面三份文件；不要去读仓库里 `benchmarks/` 下的对照材料（那是测试 Skill 用的标准答案）。
 
 ## 流程
 
@@ -33,8 +35,8 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
 2. **按 ppt-master Quick Generate 执行**：读 ppt-master 的 `SKILL.md` → `workflows/profiles/quick-generate.md`，按它的 §2–§4 走（规划能力批次、执行核心 `shared-standards-core.md` / `executor-base.md` / `semantic-svg.md` / `preset-shape-vocabulary.md`、结构化页面的 `pptx-structure-interface.md`、图表页的 chart 模块）。模板已由 `new` 安装，跳过"Template branch"中的安装动作，但要读完已安装的两份 spec 和 6 个原型 SVG。
 3. **冻结 Template Application**（固定写法，直接采用）：
    > 参考式使用。每页都用 6 个原型之一的固定层与 slot，不改页框坐标：大纲封面 → `01_cover`；大纲目录 → `02_toc`（条目 Slide-local）；大纲里的章节分隔页 → `03_chapter`；有"结论/发现"可作为 so-what 的正文页 → `04b_content_thesis`，否则 → `04a_content_frame`；只有大纲写了结束页才用 `05_ending`。正文区的几何全部 Slide-local，按 `page-patterns.md` 的页型做法构图。
-4. **规划页序**：一页大纲 = 一页幻灯片，顺序不变，不增删页。为每页定：页型（见 page-patterns 第三节）、论点条文字（原句）、右上章节标签（取自大纲目录的章节名）、要用到的推算值。
-5. **逐页写 SVG**（主 agent 自己写，按顺序）：按 page-patterns 对应页型构图（有同类试点页时参考它的写法）；写完每页对照 rules.md 的自检清单。
+4. **规划页序**：一页大纲 = 一页幻灯片，顺序不变，不增删页。为每页定：页型（见 page-patterns 第三节）、论点条文字（原句）、右上章节标签（取自大纲目录的章节名；大纲没有目录时用大纲写明的"页眉标签"）、要用到的推算值。
+5. **逐页写 SVG**（主 agent 自己写，按顺序）：按 page-patterns 对应页型构图；写完每页对照 rules.md 的自检清单。
 6. **收尾**：`finish` 生成 `runs/run-*/<文件名>.pptx`、`renders/slide-NN.png` 和 `contact.png`。**必须逐页看渲染图**（放大看对齐、遮挡、溢出），有问题改 SVG 后重跑 `finish`。
 7. **交付说明**（中文）：成品路径、contact.png；逐条列出推算值（算式）；列出所有对大纲原文的改动（拆句、缩写、省略）；列出与样张的差异和已知限制。**不要自己宣布"通过"**，请用户判断。
 
