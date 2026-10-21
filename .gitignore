@@ -12,3 +12,6 @@ _work/
 
 # ppt-master template review exports (derived evidence)
 Sam-PPT-Bain/template/exports/
+
+# local preview renders
+Sam-PPT-Bain/_preview/
