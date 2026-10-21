@@ -6,7 +6,7 @@ the run folder convention, the installed template, the recurring type roles, the
 OPPOSans CJK repair after export, and the PowerPoint render check.
 
   python sam_bain.py new <slug> [--source outline.md ...]   create runs/run-*/<slug>_<date>/
-  python sam_bain.py photos <project> car3d.png ...         copy stock photos into images/
+  python sam_bain.py photos <project> city_tech.png ...     copy stock photos into images/
   python sam_bain.py icons <project> chunk-filled/bolt ...  sync library icons into icons/
   python sam_bain.py check <project> [--early]              ppt-master SVG quality gate
   python sam_bain.py finish <project> [--name 文件名]        check, export, fix fonts, render
