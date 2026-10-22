@@ -30,6 +30,7 @@ ROLES = [
     "title:OPPOSans H:37.33",
     "thesis:OPPOSans M:26.67",
     "thesis_small:OPPOSans M:22.67",
+    "thesis_xs:OPPOSans M:21.33",
     "zone:OPPOSans M:24",
     "item:OPPOSans M:17.33",
     "label:OPPOSans M:14.67",
@@ -37,6 +38,7 @@ ROLES = [
     "note:OPPOSans R:10.67",
     "num:OPPOSans B:21.33",
     "bignum:OPPOSans B:32",
+    "hero:OPPOSans B:56",
 ]
 
 
