@@ -150,6 +150,16 @@ RUN_DIR：
 
 新增的未验证数值：精炼页阈值（约 200 字 / 3–6 个短条目）、组团占 60–75%、字号上调到说明 16–18 / 标签 20–24 / 英雄关键词 ≥ 40 px；三圆交叠里标题 20–24、说明 14.67–16 px；前缀标签宽约 150、白字 20 px。
 
+### 系列三整套实跑与提效工具（2026-10-22）
+
+- 用户在会话里直接要求用 Skill 跑 `D:\Workspace\tmp\series3-xhs-outline.md`：14 页一次做完，运行目录 `run-20261022-031228-699`，终检 0 错误。全程约 50 分钟，其中读插件文档约 10 分钟，P06–P14 平均每页约 2.7 分钟。用户还没评审这些页面，它们不是样张。这次不是"三角色"考试，生成和评审都在主会话里完成。
+- 根据这次的用时，加了三个提效工具（已并入 Skill）：
+  - `sam_bain.py scaffold`：按大纲头部的机构 / 页眉标签 / 说明写好页框，自带常用 defs，正文留空；有 `--thesis` 时用 `04b`。
+  - `sam_bain.py preview`：先把图标展开到临时副本，再用无头 Edge 截图，输出到 `<PROJECT>/preview/`。
+  - `references/ppt-master-digest.md`：替代每次通读插件执行核心。`new` 发现插件版本 ≠ 6.7.2 时提示改读原文档并更新速查。
+  - 这次用到的构造经验（漏斗梯形旋转、箭形色带宽度公式、marker 同色、维恩标签）写进了 page-patterns 四。
+- 待验证：`scaffold` / `preview` 只在本次运行的副本上测过，还没经过一次完整的新运行。
+
 ## 4. 下一步：新会话复现系列一，再测系列二、三
 
 用户计划：先在新会话里按三角色流程重跑 `series1-ecom`，能复现第 3 节的成绩就算"成功了 75%"；之后再跑系列二、三。复现时第 1 轮**不改 Skill**，先看现有 Skill 的真实水平；只有某批不达标才按评分子代理的通用建议改规则重跑。做法见 `benchmarks/README.md` 的"三角色隔离"：
@@ -168,4 +178,5 @@ RUN_DIR：
 - 图标名先查插件 `templates/icons/chunk-filled` 再用（没有 `check`、`gear`，要用 `checkmark`、`cog`）。
 - 用户说"打包"时只做模板和规则，不要顺手跑整套案例。
 - Windows 的 Python 不认 Git Bash 的 `/tmp`。Bash 写到 `/tmp/x` 的文件，Python 用 `open('/tmp/x')` 读不到，临时文件改放 scratchpad 的绝对路径。
+- 从 Python 调无头 Edge 截图时，进程可能在截图写完之前就返回，要轮询等待文件出现（`preview` 已处理）。ppt-master 的 `embed_icons.py` 按 SVG 所在文件夹名推断项目根，只认 `svg_output`、`svg_final`、`.svg_final.candidate-*` 等名字，放在其他文件夹里的副本会找不到图标。
 - 平移已有页面的坐标时，预设形状片段（`data-pptx-authoring="preset"`）不能跟着改数字，必须用 `preset_shape_svg.py` 按新的 frame 重新生成；`<tspan>` 上不写 `font-family`，字号或字族不同的行拆成独立的 `<text>`。

@@ -233,6 +233,12 @@
 - **粗线不挂 marker**：线宽超过 4 px 的线或弧带（如 20–36 px 的转弯弧）挂 `marker-end` 时，导出后箭头会按线宽放大；这类粗线的箭头改用单独的三角形 `<path>`（按线端切线方向计算三个顶点）或 `triangle` 预设，颜色与线一致。
 - **水平镜像**：把要翻转的 preset 片段原样放进一个外层 `<g transform="matrix(-1 0 0 1 W 0)">`（W = 镜像轴 x 的 2 倍），transform 写在这个外层组上，不改 preset 片段本身；外层组放在一个带 `data-pptx-bounds` 的根层组里，bounds 写翻转后的实际位置。
 - `filter`（阴影）只能挂在单个 `circle` / `rect` / `path` / `text` 上，挂在 `<g>` 上导出会失败。
+- **marker 颜色 = 线色**：marker 填色和它所挂的线的 stroke 不一致时检查器直接报错。`scaffold` 自带 `arrNavy` / `arrRed` / `arrGray` / `arrPink` / `arrWhite` 五种；线用别的颜色时，新增一个同色 marker。
+- **漏斗用 `trapezoid`**：预设默认上窄下宽。做漏斗时把每层的预设片段放进 `<g transform="rotate(180 cx cy)">`（cx、cy 取该层中心）；frame 宽度取该层上沿宽度，`adj = 单侧内缩 ÷ min(宽, 高) × 100000`。相邻层的上沿宽度等于上一层的下沿宽度，这样层层贴合。
+- **N 段箭形色带的宽度**：段高 h 时，凹口深 = h/2（默认 adj）。相邻两段重叠"凹口深 − 间隙"，所以单段宽 W =（总宽 + (N−1)×(h/2 − 间隙)）÷ N，第 i 段的 x = 起点 + i × (W − h/2 + 间隙)。文字中心：`homePlate` 在 x + (W − h/2)/2，`chevron` 在 x + W/2。
+- **维恩 / 交叠圆里的标签**：标签放在各圆不重叠的那部分，标签宽度加上到交叠区的距离要小于半径，否则会压到另一个圆上。
+
+**预览**：每写完一页跑 `sam_bain.py preview <PROJECT> <页名>`，用浏览器截图（图标已展开）当场检查遮挡、溢出和对齐。浏览器的字体度量和 PowerPoint 略有差异，紧贴边框的文字（比如在 34 px 高的条里放 32 px 的数字）要留 4 px 以上余量，最终以 `finish` 的 PowerPoint 渲染为准。
 
 **文字**
 - 多行文字的续行 `<tspan>` 必须重复父级 `x`（悬挂缩进另起一个 `<text>`）。

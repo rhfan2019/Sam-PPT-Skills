@@ -17,7 +17,8 @@ description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海�
 
 1. `references/rules.md` —— 用户的硬规则（不加词、推算值要列出、对齐与边界、只有用户能确认样张）。
 2. `references/page-patterns.md` —— 坐标体系、常用构件的精确尺寸、页型做法。
-3. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。
+3. `references/ppt-master-digest.md` —— ppt-master 执行规则速查（分组与 bounds、箭头颜色、预设形状、结构化 slot、图表核验），替代通读插件执行核心；`new` 提示插件版本不符时改读原文档。
+4. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。
 
 **独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲、本 Skill 目录里的文件和 ppt-master 插件文档；不读取其他任何文件、目录、历史运行结果或 git 历史。
 
@@ -27,12 +28,14 @@ description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海�
 python scripts/sam_bain.py new <slug> --source <大纲.md>      # 建运行目录 + 装模板 + 字号校准（输出 PROJECT= 路径）
 python scripts/sam_bain.py photos <PROJECT> city_tech.png ...  # 需要时复制素材照片（assets/photos/）
 python scripts/sam_bain.py icons  <PROJECT> chunk-filled/bolt ...  # 同步图标（一套 deck 只用一个图标库）
+python scripts/sam_bain.py scaffold <PROJECT> 03_xxx --title "…" [--thesis "…"] [--sample-data] [--source-note "…"]  # 写好一页的固定页框，正文留空
+python scripts/sam_bain.py preview <PROJECT> 03_xxx ...       # 浏览器快速截图（含图标）→ <PROJECT>/preview/*.png
 python scripts/sam_bain.py check  <PROJECT> --early          # ≥7 页时，写完 P05 后跑一次
 python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → 导出 → 字体修复 → 渲染 → contact.png
 ```
 
 1. **新建运行**：`new` 会先跑 ppt-master 的 `attribution_guard.py`（非 0 立即停止），新建运行目录 `<运行根>/run-yyyymmdd-hhmmss-fff/`（运行根见"运行环境"，不在 Skill 目录里）、建项目、安装模板、导入大纲、输出字号校准表（每 100 px 可容纳的中/英文字数）。把输出的 `RUN_DIR=` / `PROJECT=` 和校准表留在上下文里。
-2. **按 ppt-master Quick Generate 执行**：读 ppt-master 的 `SKILL.md` → `workflows/profiles/quick-generate.md`，按它的 §2–§4 走（规划能力批次、执行核心 `shared-standards-core.md` / `executor-base.md` / `semantic-svg.md` / `preset-shape-vocabulary.md`、结构化页面的 `pptx-structure-interface.md`、图表页的 chart 模块）。模板已由 `new` 安装，跳过"Template branch"中的安装动作，但要读完已安装的两份 spec 和 6 个原型 SVG。
+2. **按 ppt-master Quick Generate 执行**：插件版本与 `references/ppt-master-digest.md` 一致时，按速查执行，不再通读执行核心；版本不一致（`new` 会提示）或用到速查没写的能力（图片页、原生图表 / 表格、公式、超链接、动画、讲稿）时，读 ppt-master 的 `SKILL.md` → `workflows/profiles/quick-generate.md` 及对应模块。模板已由 `new` 安装，跳过"Template branch"中的安装动作，但要读完已安装的两份 spec 和 6 个原型 SVG。
 3. **冻结 Template Application**（固定写法，直接采用）：
    > 参考式使用。每页都用 6 个原型之一的固定层与 slot，不改页框坐标：大纲封面 → `01_cover`；大纲目录 → `02_toc`（条目 Slide-local）；大纲里的章节分隔页 → `03_chapter`；有"结论/发现"可作为 so-what 的正文页 → `04b_content_thesis`，否则 → `04a_content_frame`；只有大纲写了结束页才用 `05_ending`。正文区的几何全部 Slide-local，按 `page-patterns.md` 的页型做法构图。
 4. **规划页序**：一页大纲 = 一页幻灯片，顺序不变，不增删页。为每页定：页型（见 page-patterns 第三、三B 节）、论点条文字（"结论 / 发现"原句，没有就不放）、要用到的推算值。页框文字的来源固定如下：
@@ -43,7 +46,7 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
    | 左下页脚 | 大纲标了"示例数据"时用"示例数据，不作为真实统计引用"（rules.md 一.4）→ 否则用大纲头部的"说明"原句 → 都没有就留空。大纲给了"来源 / 脚注"（全局或每页）时，接在上面那句后面一起放进页脚 |
    | 右下署名 | 大纲头部的"机构" → 没有就留空 |
    | 封面署名 / 日期 | 大纲头部的"机构" / "日期" |
-5. **逐页写 SVG**（主 agent 自己写，按顺序）：按 page-patterns 对应页型构图；写完每页对照 rules.md 的自检清单。
+5. **逐页写 SVG**（主 agent 自己写，按顺序）：先用 `scaffold` 写好页框（标题、章节标签、页脚、署名按上表从大纲头部取值，`--sample-data` / `--source-note` / `--section` 覆盖；有论点条时传 `--thesis` 用 `04b`），再在文件末尾的注释处手写正文组；按 page-patterns 对应页型构图。每写完一页跑 `preview` 看截图，对照 rules.md 的自检清单，当场修。`preview` 只是浏览器预览，字体度量与 PowerPoint 略有差异，最终以 `finish` 的渲染图为准。
 6. **收尾**：`finish` 在 RUN_DIR 下生成 `<文件名>.pptx`、`renders/slide-NN.png` 和 `contact.png`，最后打印一个"成品"区块（PPTX 绝对路径、渲染图目录、总览图路径）。**必须逐页看渲染图**（放大看对齐、遮挡、溢出），有问题改 SVG 后重跑 `finish`。
    - 成品 PPTX 正被 PowerPoint 打开时，`finish` 会自动另存为 `<文件名>-v2.pptx`、`-v3`……，以成品区块打印的路径为准。
    - 用户对某页返工时（"空""简陋"之类），按 rules.md 五"返工时先换构造，不打补丁"处理。

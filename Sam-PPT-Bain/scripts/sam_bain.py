@@ -9,6 +9,8 @@ OPPOSans CJK repair after export, and the PowerPoint render check.
   python sam_bain.py new <slug> [--source outline.md ...]   create <runs>/run-*/<slug>_<date>/
   python sam_bain.py photos <project> city_tech.png ...     copy stock photos into images/
   python sam_bain.py icons <project> chunk-filled/bolt ...  sync library icons into icons/
+  python sam_bain.py scaffold <project> 03_name --title ... [--thesis ...]  page frame only, body left empty
+  python sam_bain.py preview <project> [03_name ...]        quick browser screenshots into preview/
   python sam_bain.py check <project> [--early]              ppt-master SVG quality gate
   python sam_bain.py finish <project> [--name 文件名]        check, export, fix fonts, render
 """
@@ -16,11 +18,14 @@ import argparse
 import datetime as dt
 import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 SKILL = Path(__file__).resolve().parent.parent
 TEMPLATE = SKILL / "template"
@@ -45,6 +50,29 @@ ROLES = [
     "bignum:OPPOSans B:32",
     "hero:OPPOSans B:56",
 ]
+
+
+# ppt-master version that references/ppt-master-digest.md was distilled from.
+DIGEST_VERSION = "6.7.2"
+
+# Shared paint every content page may reference: same-hue gradients, line-end markers
+# (one per stroke colour, the marker fill must equal the line stroke) and the soft shadow.
+PAGE_DEFS = """  <defs>
+    <linearGradient id="gNavyV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E5A94"/><stop offset="1" stop-color="#16365F"/></linearGradient>
+    <linearGradient id="gNavyH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#16365F"/><stop offset="1" stop-color="#2E5A94"/></linearGradient>
+    <linearGradient id="gRedV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C0503E"/><stop offset="1" stop-color="#8E2B1D"/></linearGradient>
+    <linearGradient id="gRedH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E2B1D"/><stop offset="1" stop-color="#C0503E"/></linearGradient>
+    <linearGradient id="gBlueRed" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1C4274"/><stop offset="1" stop-color="#A23424"/></linearGradient>
+    <marker id="arrNavy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#1C4274"/></marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#A23424"/></marker>
+    <marker id="arrGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#8EA9CF"/></marker>
+    <marker id="arrPink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#E3A79C"/></marker>
+    <marker id="arrWhite" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#FFFFFF"/></marker>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.14"/></filter>
+  </defs>
+"""
+
+SAMPLE_DATA_FOOTER = "示例数据，不作为真实统计引用"
 
 
 def ppt_master_dir():
@@ -74,8 +102,18 @@ def pm(script, *args, check=True):
     return run([sys.executable, PM / "scripts" / script, *args], check=check)
 
 
+def ppt_master_version():
+    m = re.search(r'^\s*version:\s*"?([\w.]+)', (PM / "SKILL.md").read_text(encoding="utf-8"), re.M)
+    return m.group(1) if m else "unknown"
+
+
 def cmd_new(a):
     pm("attribution_guard.py")
+    version = ppt_master_version()
+    if version != DIGEST_VERSION:
+        print(f"[WARN] ppt-master is {version}, references/ppt-master-digest.md was written for "
+              f"{DIGEST_VERSION}: read the original execution docs this run and refresh the digest",
+              flush=True)
     now = dt.datetime.now()
     run_dir = RUNS / f"run-{now:%Y%m%d-%H%M%S}-{now.microsecond // 1000:03d}"
     run_dir.mkdir(parents=True)
@@ -101,6 +139,97 @@ def cmd_photos(a):
 
 def cmd_icons(a):
     pm("icon_sync.py", a.project, *a.icons)
+
+
+def outline_header(project):
+    """`- 键：值` lines above the first `---` of the imported outline (机构 / 页眉标签 / 说明 / 日期 ...)."""
+    header = {}
+    for md in sorted((project / "sources").glob("*.md")):
+        for line in md.read_text(encoding="utf-8").splitlines():
+            if line.strip() == "---":
+                break
+            m = re.match(r"^\s*-\s*([^：:]+)[：:]\s*(.+?)\s*$", line)
+            if m:
+                header.setdefault(m.group(1).strip(), m.group(2))
+        if header:
+            break
+    return header
+
+
+def cmd_scaffold(a):
+    """Write the fixed page frame of one content page; the body stays for hand authoring."""
+    project = Path(a.project).resolve()
+    out = project / "svg_output" / f"{a.page}.svg"
+    if out.exists() and not a.force:
+        sys.exit(f"{out.name} already exists; pass --force to overwrite it")
+    header = outline_header(project)
+    layout = "04b_content_thesis" if a.thesis else "04a_content_frame"
+    footer = SAMPLE_DATA_FOOTER if a.sample_data else (a.footer if a.footer is not None else header.get("说明", ""))
+    if a.source_note:
+        footer += a.source_note
+    values = {
+        "{{PAGE_TITLE}}": a.title,
+        "{{SECTION_NAME}}": a.section if a.section is not None else header.get("页眉标签", ""),
+        "{{KEY_MESSAGE}}": a.thesis or "",
+        "{{SOURCE}}": footer,
+        "{{AUTHOR}}": a.author if a.author is not None else header.get("机构", ""),
+    }
+    svg = (project / "templates" / f"{layout}.svg").read_text(encoding="utf-8")
+    for key, value in values.items():
+        svg = svg.replace(key, escape(value))
+    svg = svg.replace('viewBox="0 0 1280 720"', 'viewBox="0 0 1280 720" lang="zh-CN"', 1)
+    svg = svg.replace('  <rect id="master-background"', PAGE_DEFS + '  <rect id="master-background"', 1)
+    svg = svg.replace("</svg>", "\n  <!-- body: Slide-local groups from here (y 166–672 with thesis, 96–672 without) -->\n</svg>")
+    out.write_text(svg, encoding="utf-8")
+    cjk = len(re.findall(r"[\u3000-\u9fff\uff00-\uffef]", a.title))
+    if cjk > 20:
+        print(f"[WARN] title has {cjk} CJK characters (> 20): follow page-patterns 四 for long titles")
+    print(f"PAGE={out}  (layout {layout}; section={values['{{SECTION_NAME}}']!r}, footer={footer!r})")
+
+
+def find_browser():
+    for p in (os.environ.get("SAM_PPT_BROWSER"),
+              r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+              r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+              r"C:\Program Files\Google\Chrome\Application\chrome.exe"):
+        if p and Path(p).exists():
+            return p
+    sys.exit("no Edge/Chrome found for preview; set SAM_PPT_BROWSER to a Chromium browser executable")
+
+
+def cmd_preview(a):
+    """Browser screenshots of draft pages, icons expanded; PowerPoint rendering stays in finish."""
+    project = Path(a.project).resolve()
+    pages = [project / "svg_output" / f"{n.removesuffix('.svg')}.svg" for n in a.pages] \
+        or sorted((project / "svg_output").glob("*.svg"))
+    missing = [p.name for p in pages if not p.exists()]
+    if missing:
+        sys.exit(f"not found in svg_output/: {', '.join(missing)}")
+    # The working copy sits beside svg_output/ under a folder name ppt-master maps back to the
+    # project root, so ../images and the project icon pool resolve exactly as they do for export.
+    work = project / ".svg_final.candidate-preview"
+    out = project / "preview"
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir()
+    out.mkdir(exist_ok=True)
+    copies = [work / p.name for p in pages]
+    for src, dst in zip(pages, copies):
+        shutil.copy2(src, dst)
+    pm("svg_finalize/embed_icons.py", *copies, check=False)
+    browser = find_browser()
+    for svg in copies:
+        png = out / f"{svg.stem}.png"
+        png.unlink(missing_ok=True)
+        subprocess.run([browser, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+                        "--window-size=1280,720", f"--screenshot={png}", svg.as_uri()],
+                       capture_output=True)
+        # Edge may hand the screenshot off to a background process and return before it is written.
+        for _ in range(60):
+            if png.exists() and png.stat().st_size > 0:
+                break
+            time.sleep(0.25)
+        print(f"PREVIEW={png}" if png.exists() else f"[WARN] no screenshot for {svg.name}")
+    shutil.rmtree(work, ignore_errors=True)
 
 
 def checker(project, stage):
@@ -184,6 +313,22 @@ def main():
     p.add_argument("project")
     p.add_argument("icons", nargs="+")
     p.set_defaults(fn=cmd_icons)
+    p = sub.add_parser("scaffold")
+    p.add_argument("project")
+    p.add_argument("page", help="file stem in svg_output/, e.g. 03_three_stage_plan")
+    p.add_argument("--title", required=True)
+    p.add_argument("--thesis", help="结论/发现原句; selects 04b_content_thesis")
+    p.add_argument("--section", help="右上章节标签 (default: outline 页眉标签)")
+    p.add_argument("--footer", help="左下页脚 (default: outline 说明)")
+    p.add_argument("--sample-data", action="store_true", help="page marked 示例数据")
+    p.add_argument("--source-note", help="text appended to the footer, e.g. 数据来源：...")
+    p.add_argument("--author", help="右下署名 (default: outline 机构)")
+    p.add_argument("--force", action="store_true")
+    p.set_defaults(fn=cmd_scaffold)
+    p = sub.add_parser("preview")
+    p.add_argument("project")
+    p.add_argument("pages", nargs="*", help="page stems; default: every page in svg_output/")
+    p.set_defaults(fn=cmd_preview)
     p = sub.add_parser("check")
     p.add_argument("project")
     p.add_argument("--early", action="store_true")
