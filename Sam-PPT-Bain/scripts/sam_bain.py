@@ -158,7 +158,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("new")
-    p.add_argument("slug", help="ASCII project slug, e.g. nev-report")
+    p.add_argument("slug", help="ASCII project slug, e.g. demo-report")
     p.add_argument("--source", nargs="*", help="outline or source files to import into sources/")
     p.set_defaults(fn=cmd_new)
     p = sub.add_parser("photos")
