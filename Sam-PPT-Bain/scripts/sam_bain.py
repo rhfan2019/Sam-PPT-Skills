@@ -127,6 +127,21 @@ def contact_sheet(render_dir, out):
     sheet.save(out)
 
 
+def free_deck_path(run_dir, stem):
+    """The deck path, or <stem>-v2/-v3... when an earlier copy is held open by PowerPoint."""
+    deck, n = run_dir / f"{stem}.pptx", 1
+    while deck.exists():
+        try:
+            with open(deck, "r+b"):
+                break
+        except PermissionError:
+            n += 1
+            deck = run_dir / f"{stem}-v{n}.pptx"
+    if n > 1:
+        print(f"[NOTE] {stem}.pptx is open in another program; writing {deck.name} instead", flush=True)
+    return deck
+
+
 def cmd_finish(a):
     project = Path(a.project).resolve()
     run_dir = project.parent
@@ -137,7 +152,7 @@ def cmd_finish(a):
         export_args.append("--native-charts-and-tables")
     pm("svg_to_pptx.py", project, *export_args)
     raw = max((project / "exports").glob("*.pptx"), key=os.path.getmtime)
-    deck = run_dir / f"{a.name or project.name}.pptx"
+    deck = free_deck_path(run_dir, a.name or project.name)
     run([sys.executable, SKILL / "scripts" / "fix_cjk_fonts.py", raw, "-o", deck])
     if not a.no_render:
         render_dir = run_dir / "renders"
