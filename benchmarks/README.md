@@ -6,7 +6,7 @@
 | 目录 | 内容 | 状态 |
 |---|---|---|
 | `series1-ecom/outline.md` | 系列一：电商广告主商业价值报告，12 页 | 首轮已达标（用户认可），待在新会话复现 |
-| `series2-nev/outline.md` | 系列二：新能源汽车商业价值报告，16 页 | 待测 |
+| `series2-nev/outline.md` | 系列二：新能源汽车商业价值报告，16 页 | 考试第 1 轮已测（307/320），通用建议见 `series2-nev/exam1-suggestions.md` |
 | `series3-xhs/outline.md` | 系列三：小红书媒体价值洞察白皮书，14 页 | 待测 |
 | `series9-ddmr/outline.md` | 系列九：Nature 论文解读《多巴胺驱动母体大脑的持续重塑》，10 页 | 待测 |
 
@@ -15,7 +15,7 @@
 ## 测试方式（三角色隔离）
 
 1. **编排会话**：把要测的大纲复制到中性路径（如 `D:\Workspace\tmp\<case>-outline.md`），按批（每批 4 页）启动生成子代理；拿到评分子代理的通用建议后改 Skill、提交推送。编排会话不打开评分工具包。
-2. **生成子代理**（每轮新开）：只用 Skill 和大纲副本生成页面。提示里写明：不得读取仓库 git 历史、`HANDOVER.md`、`benchmarks/` 下除大纲副本外的内容、`Sam-PPT-Bain\runs\` 下别人的运行目录，不得修改 Skill、不得 commit。
+2. **生成子代理**（每轮新开）：只用 Skill 和大纲副本生成页面。提示里写明：不得读取仓库 git 历史、`HANDOVER.md`、`benchmarks/` 下除大纲副本外的内容、运行根（`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\`）下别人的运行目录，不得修改 Skill、不得 commit。
 3. **评分子代理**（每轮新开）：唯一能打开评分工具包的角色；按工具包里的流程对比、打分，只回报**通用**改进建议。
 
 每批最多 3 轮；达标线：每页总分 ≥ 16（满分 20）且没有 0 分项。

@@ -2,10 +2,11 @@
 
 ppt-master does the work (project layout, template install, typography calibration,
 SVG checks, native PPTX export); this script only fixes the Sam-PPT-Bain choices:
-the run folder convention, the installed template, the recurring type roles, the
+the run folder convention (outside the Skill folder, under the system temp dir
+or $SAM_PPT_RUNS), the installed template, the recurring type roles, the
 OPPOSans CJK repair after export, and the PowerPoint render check.
 
-  python sam_bain.py new <slug> [--source outline.md ...]   create runs/run-*/<slug>_<date>/
+  python sam_bain.py new <slug> [--source outline.md ...]   create <runs>/run-*/<slug>_<date>/
   python sam_bain.py photos <project> city_tech.png ...     copy stock photos into images/
   python sam_bain.py icons <project> chunk-filled/bolt ...  sync library icons into icons/
   python sam_bain.py check <project> [--early]              ppt-master SVG quality gate
@@ -18,12 +19,16 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 SKILL = Path(__file__).resolve().parent.parent
 TEMPLATE = SKILL / "template"
 PHOTOS = SKILL / "assets" / "photos"
-RUNS = SKILL / "runs"
+# Run folders live outside the Skill folder so a run never sits next to the rules
+# (and blind runs cannot browse each other through the Skill tree).
+RUNS = Path(os.environ.get("SAM_PPT_RUNS")
+            or Path(tempfile.gettempdir()) / "claude" / "Sam-PPT-Runs" / "Sam-PPT-Bain")
 
 # Recurring type roles of the Sam Bain deck (family:size in px on the 1280x720 canvas).
 ROLES = [
@@ -141,7 +146,12 @@ def cmd_finish(a):
         run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
              SKILL / "scripts" / "render.ps1", deck, render_dir])
         contact_sheet(render_dir, run_dir / "contact.png")
-    print(f"\nDECK={deck}")
+    bar = "=" * 72
+    print(f"\n{bar}\n成品 PPTX：{deck}")
+    if not a.no_render:
+        print(f"渲染图目录：{render_dir}\n总览图：{run_dir / 'contact.png'}")
+    print("提示：成品位于系统临时目录，可能被系统清理；需要保留请另存到其他位置。")
+    print(f"{bar}\nDECK={deck}")
 
 
 def main():

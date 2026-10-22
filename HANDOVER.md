@@ -19,7 +19,7 @@
 | ppt-master | 插件 `~/.claude/plugins/cache/ppt-master/ppt-master/<hash>/ppt-master`（只读） |
 | 基准大纲 | `benchmarks/`：只有大纲（考题）。`series1-ecom`（系列一，12 页）、`series2-nev`（系列二，16 页）、`series3-xhs`（系列三，14 页） |
 | 评分工具包与私有存档 | **不在仓库里，也不写路径**。参考页截图、评分记录、对比工具、旧引擎导出物都在本机仓库之外的位置，路径记在主会话的本地记忆里（或问用户）。只有评分子代理可以打开 |
-| 每次运行 | `Sam-PPT-Bain/runs/run-yyyymmdd-hhmmss-fff/`（gitignore；目前已清空） |
+| 每次运行 | 仓库之外：`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\run-yyyymmdd-hhmmss-fff\`（`sam_bain.py` 用 `tempfile.gettempdir()` 拼出，环境变量 `SAM_PPT_RUNS` 可覆盖）。Skill 目录下不再有 `runs\`；2026-10-21 已把旧运行目录全部移到这里。临时目录可能被系统清理，要保留的成品另存 |
 
 硬约定：每次有意义的修改都 `git commit` + `git push`（无需再问）；只有用户说"可以了"才算确认。
 
@@ -57,17 +57,17 @@
 | 合计 | | 307 / 320 | |
 
 RUN_DIR：
-- 批次 1：`Sam-PPT-Bain/runs/run-20261021-190524-436`
-- 批次 2：`Sam-PPT-Bain/runs/run-20261021-192522-795`
-- 批次 3：`Sam-PPT-Bain/runs/run-20261021-194319-069`
-- 批次 4：`Sam-PPT-Bain/runs/run-20261021-200434-800`
+- 批次 1：`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\run-20261021-190524-436`
+- 批次 2：`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\run-20261021-192522-795`
+- 批次 3：`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\run-20261021-194319-069`
+- 批次 4：`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\run-20261021-200434-800`
 
 ## 4. 下一步：新会话复现系列一，再测系列二、三
 
 用户计划：先在新会话里按三角色流程重跑 `series1-ecom`，能复现第 3 节的成绩就算"成功了 75%"；之后再跑系列二、三。复现时第 1 轮**不改 Skill**，先看现有 Skill 的真实水平；只有某批不达标才按评分子代理的通用建议改规则重跑。做法见 `benchmarks/README.md` 的"三角色隔离"：
 
 1. **编排会话（你）**：不打开评分工具包。把 `benchmarks/<case>/outline.md` 复制到 `D:\Workspace\tmp\<case>-outline.md`。
-2. **生成子代理**：每批 4 页、每轮新开一个。提示要点：用 Skill 工具调用 `Sam-PPT-Bain` 并严格按 SKILL.md 执行；大纲用副本的第 X–Y 页；不得读取 git 历史、`HANDOVER.md`、`Sam-PPT-Bain\runs\` 下别人的目录；不得修改 Skill、不得 commit、不得改大纲；最后回报 RUN_DIR、每页原型与主视觉、省略之处、不满意之处、规则缺口。
+2. **生成子代理**：每批 4 页、每轮新开一个。提示要点：用 Skill 工具调用 `Sam-PPT-Bain` 并严格按 SKILL.md 执行；大纲用副本的第 X–Y 页；不得读取 git 历史、`HANDOVER.md`、运行根下别人的运行目录；不得修改 Skill、不得 commit、不得改大纲；最后回报 RUN_DIR、每页原型与主视觉、省略之处、不满意之处、规则缺口。
 3. **评分子代理**：每轮新开一个，把评分工具包路径、RUN_DIR、case、首页页码告诉它，让它按工具包 `README.md` 里的"评分子代理提示模板"执行；它只回报得分和**通用**改进建议。
 4. 编排会话把通用建议写进 `references/`，提交推送，再开新的生成子代理重跑；每批最多 3 轮。
 5. 全部完成后，请评分子代理把各批对比图汇总，发给用户判断。
