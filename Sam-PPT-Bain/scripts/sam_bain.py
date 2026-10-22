@@ -124,7 +124,58 @@ def cmd_new(a):
     if a.source:
         pm("project_manager.py", "import-sources", project, *a.source, "--copy")
     pm("text_measure.py", "calibrate", project, *[x for r in ROLES for x in ("--role", r)])
+    a.run_dir = run_dir
     print(f"\nRUN_DIR={run_dir}\nPROJECT={project}")
+
+
+# Every command appends one tab-separated line to <run_dir>/timing.log:
+# start, end (ISO seconds), seconds, command, status, detail (slug / page stems / file name).
+TIMING = "timing.log"
+
+
+def log_timing(run_dir, a, start, end, status):
+    detail = {"new": lambda: a.slug, "scaffold": lambda: a.page, "finish": lambda: a.name or "",
+              "preview": lambda: " ".join(n.removesuffix(".svg") for n in a.pages) or "all",
+              "icons": lambda: f"{len(a.icons)} icons", "photos": lambda: " ".join(a.names),
+              "check": lambda: "early" if a.early else "final"}[a.cmd]()
+    with open(Path(run_dir) / TIMING, "a", encoding="utf-8") as f:
+        f.write(f"{start.isoformat(timespec='seconds')}\t{end.isoformat(timespec='seconds')}\t"
+                f"{(end - start).total_seconds():.0f}\t{a.cmd}\t{status}\t{detail}\n")
+
+
+def timing_summary(run_dir):
+    """Phase breakdown of one run, read back from timing.log (reading the docs before `new` is not logged)."""
+    rows = []
+    for line in (Path(run_dir) / TIMING).read_text(encoding="utf-8").splitlines():
+        s, e, sec, cmd, status, detail = (line.split("\t") + [""] * 6)[:6]
+        rows.append((dt.datetime.fromisoformat(s), dt.datetime.fromisoformat(e), int(sec), cmd, status, detail))
+    mins = lambda td: f"{int(td.total_seconds()) // 60} 分 {int(td.total_seconds()) % 60} 秒"
+    new = next((r for r in rows if r[3] == "new"), None)
+    finishes = [r for r in rows if r[3] == "finish" and r[4] == "ok"]
+    if not new or not finishes:
+        return ""
+    out = ["", "=" * 72, f"耗时（timing.log；不含 new 之前读文档的时间）",
+           f"总计（new 开始 → 本次 finish 结束）：{mins(finishes[-1][1] - new[0])}",
+           f"  建项目 new：{new[2]} 秒",
+           f"  逐页编写（new 结束 → 第一次 finish 开始）：{mins(finishes[0][0] - new[1])}"]
+    # A page's authoring time = its first preview minus the previous page's first preview (or the end of new).
+    first_seen, last = {}, new[1]
+    for r in rows:
+        if r[3] == "preview" and r[1] <= finishes[0][0]:
+            for stem in r[5].split():
+                first_seen.setdefault(stem, r[1])
+    for stem, t in sorted(first_seen.items(), key=lambda kv: kv[1]):
+        out.append(f"    {stem}：{mins(t - last)}")
+        last = t
+    checks = [r for r in rows if r[3] == "check"]
+    previews = [r for r in rows if r[3] == "preview"]
+    out.append(f"  其中 preview {len(previews)} 次共 {sum(r[2] for r in previews)} 秒，"
+               f"check {len(checks)} 次共 {sum(r[2] for r in checks)} 秒")
+    out.append(f"  finish {len(finishes)} 次：" + "、".join(f"{r[2]} 秒" for r in finishes))
+    if len(finishes) > 1:
+        out.append(f"  看渲染图 + 返修（第一次 finish 结束 → 最后一次结束）：{mins(finishes[-1][1] - finishes[0][1])}")
+    out.append("=" * 72)
+    return "\n".join(out)
 
 
 def cmd_photos(a):
@@ -340,7 +391,19 @@ def main():
     p.add_argument("--no-render", action="store_true")
     p.set_defaults(fn=cmd_finish)
     a = ap.parse_args()
-    a.fn(a)
+    start, status = dt.datetime.now(), "ok"
+    try:
+        a.fn(a)
+    except BaseException as e:
+        if not (isinstance(e, SystemExit) and e.code in (0, None)):
+            status = "fail"
+        raise
+    finally:
+        run_dir = getattr(a, "run_dir", None) or (Path(a.project).resolve().parent if getattr(a, "project", None) else None)
+        if run_dir and run_dir.exists():
+            log_timing(run_dir, a, start, dt.datetime.now(), status)
+            if a.cmd == "finish" and status == "ok":
+                print(timing_summary(run_dir))
 
 
 if __name__ == "__main__":

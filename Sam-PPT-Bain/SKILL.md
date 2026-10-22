@@ -48,6 +48,7 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
    | 封面署名 / 日期 | 大纲头部的"机构" / "日期" |
 5. **逐页写 SVG**（主 agent 自己写，按顺序）：先用 `scaffold` 写好页框（标题、章节标签、页脚、署名按上表从大纲头部取值，`--sample-data` / `--source-note` / `--section` 覆盖；有论点条时传 `--thesis` 用 `04b`），再在文件末尾的注释处手写正文组；按 page-patterns 对应页型构图。每写完一页跑 `preview` 看截图，对照 rules.md 的自检清单，当场修。`preview` 只是浏览器预览，字体度量与 PowerPoint 略有差异，最终以 `finish` 的渲染图为准。
 6. **收尾**：`finish` 在 RUN_DIR 下生成 `<文件名>.pptx`、`renders/slide-NN.png` 和 `contact.png`，最后打印一个"成品"区块（PPTX 绝对路径、渲染图目录、总览图路径）。**必须逐页看渲染图**（放大看对齐、遮挡、溢出），有问题改 SVG 后重跑 `finish`。
+   - 每条命令都会往 `RUN_DIR\timing.log` 追加一行起止时间；`finish` 结束时据此打印"耗时"区块（建项目、逐页编写、每页耗时、preview/check/finish 次数、返修时长）。用户问耗时就引用这个区块；`new` 之前读文档的时间不在日志里。
    - 成品 PPTX 正被 PowerPoint 打开时，`finish` 会自动另存为 `<文件名>-v2.pptx`、`-v3`……，以成品区块打印的路径为准。
    - 用户对某页返工时（"空""简陋"之类），按 rules.md 五"返工时先换构造，不打补丁"处理。
    - 检查器和导出报的 OPPOSans 字体安全提示（"Font stack exports non-PPT-safe typeface(s) … OPPOSans"、`unsafe_exported_faces` / portability advisory 之类）是**预期内的**：本 Skill 指定用 OPPOSans，导出后由 `fix_cjk_fonts.py` 修复。这类提示可以忽略，但只忽略这一类，其余警告照常处理。
