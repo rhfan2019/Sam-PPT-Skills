@@ -19,7 +19,7 @@ description: 把用户给的 PPT 大纲按 参考模板 模板的贝恩 / 咨询
 2. `references/page-patterns.md` —— 坐标体系、常用构件的精确尺寸、页型做法。
 3. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。
 
-**独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲和上面三份文件；不要去读仓库里 `benchmarks/` 下的对照材料（那是测试 Skill 用的标准答案）。
+**独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲和上面三份文件；不要去读仓库根的 `benchmarks/`、`HANDOVER.md`，也不要打开任何参考 PPT 原件或它的导出物、存档、历史运行目录和 git 历史——那些是测试 Skill 用的标准答案。
 
 ## 流程
 
