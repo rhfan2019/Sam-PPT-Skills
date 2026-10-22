@@ -16,7 +16,7 @@ keywords: [consulting, whitepaper, answer-first, dense-diagram, chinese]
 | Style Name | Sam 蓝红咨询构图 |
 | Best Fit | 中文行业研究、咨询白皮书、经营诊断与方案汇报中需要"一页讲清一个判断并给出证据"的正文页，既用于讲解也用于会后精读 |
 | Reusable Intent | 每页以结论标题 + 论点条给出答案，用一个中央主图承载核心关系，左右两翼分别解释"是什么"和"意味着什么"，远端证据框给出本页新增的量化依据，底部框架条把页面收束为一组"A ⇄ B"关系 |
-| Sources | 用户提供的 参考模板 正文页构图拆解；论证方法继承 ppt-master `mbb-consulting`；用户于 2026-10-21 的多轮对齐/边界反馈 [decision] |
+| Sources | 用户提供的咨询白皮书正文页构图拆解；论证方法继承 ppt-master `mbb-consulting`；用户于 2026-10-21 的多轮对齐/边界反馈 [decision] |
 
 ## II. Communication Method
 

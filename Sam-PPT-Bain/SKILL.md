@@ -1,13 +1,13 @@
 ---
 name: Sam-PPT-Bain
-description: 把用户给的 PPT 大纲按 参考模板 模板的贝恩 / 咨询白皮书风格（海军蓝 + 砖红、OPPOSans、论点条 + 区块标签 + 主图两翼 + 证据框 + 框架条）生成可编辑 PPTX。底层引擎是 ppt-master（Quick Generate + 本 Skill 自带的 Deck/Style 模板），本 Skill 只固化风格、规则和收尾步骤。用户给出大纲要求做成 PPT、提到 Sam-PPT-Bain、贝恩风格、参考模板 模板、咨询白皮书风格时使用。每次运行输出到独立的 runs/run-yyyymmdd-hhmmss-fff 目录，并用 PowerPoint 渲染自检。不负责写大纲。
+description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海军蓝 + 砖红、OPPOSans、论点条 + 区块标签 + 主图两翼 + 证据框 + 框架条）生成可编辑 PPTX。底层引擎是 ppt-master（Quick Generate + 本 Skill 自带的 Deck/Style 模板），本 Skill 只固化风格、规则和收尾步骤。用户给出大纲要求做成 PPT、提到 Sam-PPT-Bain、贝恩风格、蓝红咨询模板、咨询白皮书风格时使用。每次运行输出到独立的 runs/run-yyyymmdd-hhmmss-fff 目录，并用 PowerPoint 渲染自检。不负责写大纲。
 ---
 
 # Sam-PPT-Bain
 
 **薄外壳**：版面生成、检查、导出全部交给 ppt-master；本 Skill 提供三样东西——
 
-1. `template/`：ppt-master 的 Deck + Style 模板工作区（6 个原型：封面、目录、章节页、正文页框、正文 + 论点条、结束页），由 参考模板 重建；
+1. `template/`：ppt-master 的 Deck + Style 模板工作区（6 个原型：封面、目录、章节页、正文页框、正文 + 论点条、结束页）；
 2. `references/`：用户的硬规则、咨询版式做法、经用户确认的样张；
 3. `scripts/sam_bain.py`：固定的运行目录、模板安装、字号校准、导出后的 OPPOSans 中文字体修复、PowerPoint 渲染。
 
@@ -19,7 +19,7 @@ description: 把用户给的 PPT 大纲按 参考模板 模板的贝恩 / 咨询
 2. `references/page-patterns.md` —— 坐标体系、常用构件的精确尺寸、页型做法。
 3. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。
 
-**独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲和上面三份文件；不要去读仓库根的 `benchmarks/`、`HANDOVER.md`，也不要打开任何参考 PPT 原件或它的导出物、存档、历史运行目录和 git 历史——那些是测试 Skill 用的标准答案。
+**独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲、本 Skill 目录里的文件和 ppt-master 插件文档；不读取其他任何文件、目录、历史运行结果或 git 历史。
 
 ## 流程
 

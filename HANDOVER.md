@@ -17,31 +17,26 @@
 | 仓库（私有） | https://github.com/rhfan2019/Sam-PPT-Skills ，分支 `main` |
 | 本地 | `D:\Workspace\Sam-PPT-Skills`（个人 Skill 目录链接 `C:\Users\fanrh\.claude\skills\Sam-PPT-Bain` 指向 `Sam-PPT-Bain/`） |
 | ppt-master | 插件 `~/.claude/plugins/cache/ppt-master/ppt-master/<hash>/ppt-master`（只读） |
-| 参考 PPT 原件 | `参考模板`（80 页；`参考模板副本` 是同一文件） |
-| 对照基准 | `benchmarks/`：`ecom-case`（系列一，已完成）、`series2-nev`（系列二，16 页，待测）、`series3-xhs`（系列三，14 页，待测）、`nev-case`（早期自编，暂停）、`tools/compare.py` |
-| 私有存档（不在仓库） | `私有存档`：`_work`（旧引擎与 参考模板 全量 SVG 导入，含全部 80 页源码）、`bain_cmp`（80 页渲染图）、`runs`（2026-10-21 之前的全部运行）。**这是作弊高风险区，盲测子代理禁止访问** |
+| 基准大纲 | `benchmarks/`：只有大纲（考题）。`ecom-case`（系列一，已完成）、`series2-nev`（系列二，16 页，待测）、`series3-xhs`（系列三，14 页，待测）、`nev-case`（早期自编，暂停） |
+| 评分工具包与私有存档 | **不在仓库里，也不写路径**。参考页截图、评分记录、对比工具、旧引擎导出物都在本机仓库之外的位置，路径记在主会话的本地记忆里（或问用户）。只有评分子代理可以打开 |
 | 每次运行 | `Sam-PPT-Bain/runs/run-yyyymmdd-hhmmss-fff/`（gitignore；目前已清空） |
 
 硬约定：每次有意义的修改都 `git commit` + `git push`（无需再问）；只有用户说"可以了"才算确认。
 
 ## 3. 系列一闭环结果（2026-10-21）
 
-详见 `benchmarks/ecom-case/scores.md` 与 `results/`。盲测得分：P1–P4 19/18/17/20；P5–P8 16/19/19/17；P9–P12 19/19/19/18。用户评价："这三批的质量超过我的预期"。
+评分记录与对比图在评分工具包里。盲测得分：P1–P4 19/18/17/20；P5–P8 16/19/19/17；P9–P12 19/19/19/18。用户评价："这三批的质量超过我的预期"。
 
 ## 4. 下一步：系列二、三迁移测试（在新会话进行）
 
-用户要求：先在新会话里测试系列二、三，检验 Skill 换主题后是否仍"神似"。
+用户要求：在新会话里测试系列二、三，检验 Skill 换主题后是否仍"神似"，并彻底规避不守规矩的 agent。做法见 `benchmarks/README.md` 的"三角色隔离"：
 
-1. 读 `benchmarks/README.md` 的"防作弊约定"和"闭环测试流程"，严格照做。
-2. 把 `benchmarks/series2-nev/outline.md` 复制到 `D:\Workspace\tmp\series2-outline.md`（系列三同理），盲测子代理只读这份副本。
-3. 每批 4 页由**新的**盲测子代理生成（提示模板见下），主会话用 `tools/compare.py` 对比、按评分表打分、写 `scores.md`、把通用差距写进 Skill、提交推送，每批最多 3 轮。
-4. 全部完成后，把各批对比图汇总给用户判断。
-
-盲测子代理提示要点（每次照抄并替换页码）：
-- 用 Skill 工具调用 `Sam-PPT-Bain`，严格按 SKILL.md 执行；大纲用 `D:\Workspace\tmp\<case>-outline.md` 的第 X–Y 页。
-- 禁止打开或搜索：`D:\Workspace\Sam-PPT-Skills\benchmarks\`、`D:\Workspace\Sam-PPT-Skills\HANDOVER.md`、`模板目录` 下的任何 PPTX、`私有存档`、git 历史（`git log -p` / `git show`）、`Sam-PPT-Bain\runs\` 下除自己新建以外的目录。
-- 不得修改 Skill 文件、不得 commit、不得改大纲文字。
-- 最后回复：RUN_DIR、每页原型与主视觉、对大纲的省略、仍不满意之处、Skill 规则里缺了什么。
+1. **编排会话（你）**：不打开评分工具包。把 `benchmarks/<case>/outline.md` 复制到 `D:\Workspace\tmp\<case>-outline.md`。
+2. **生成子代理**：每批 4 页、每轮新开一个。提示要点：用 Skill 工具调用 `Sam-PPT-Bain` 并严格按 SKILL.md 执行；大纲用副本的第 X–Y 页；不得读取 git 历史、`HANDOVER.md`、`Sam-PPT-Bain\runs\` 下别人的目录；不得修改 Skill、不得 commit、不得改大纲；最后回报 RUN_DIR、每页原型与主视觉、省略之处、不满意之处、规则缺口。
+uns\` 下别人的目录；不得修改 Skill、不得 commit、不得改大纲；最后回报 RUN_DIR、每页原型与主视觉、省略之处、不满意之处、规则缺口。
+3. **评分子代理**：每轮新开一个，把评分工具包路径、RUN_DIR、case、首页页码告诉它，让它按工具包 `README.md` 里的"评分子代理提示模板"执行；它只回报得分和**通用**改进建议。
+4. 编排会话把通用建议写进 `references/`，提交推送，再开新的生成子代理重跑；每批最多 3 轮。
+5. 全部完成后，请评分子代理把各批对比图汇总，发给用户判断。
 
 ## 5. 已踩过的坑
 
