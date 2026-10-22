@@ -10,13 +10,16 @@ OPPOSans CJK repair after export, and the PowerPoint render check.
   python sam_bain.py photos <project> city_tech.png ...     copy stock photos into images/
   python sam_bain.py icons <project> chunk-filled/bolt ...  sync library icons into icons/
   python sam_bain.py scaffold <project> 03_name --title ... [--thesis ...]  page frame only, body left empty
-  python sam_bain.py preview <project> [03_name ...]        quick browser screenshots into preview/
+  python sam_bain.py put <project> 03_name [body.svg]      paste the hand-written body (<!--P ...--> presets expanded), then preview
+  python sam_bain.py preview <project> [03_name ...]        quick browser screenshots into preview/ + single-page check
+  python sam_bain.py measure "文字" ... --role body [--max-width 300]  rendered width / wrapped lines
   python sam_bain.py check <project> [--early]              ppt-master SVG quality gate
   python sam_bain.py finish <project> [--name 文件名]        check, export, fix fonts, render
 """
 import argparse
 import datetime as dt
 import glob
+import json
 import os
 import re
 import shutil
@@ -137,7 +140,8 @@ def log_timing(run_dir, a, start, end, status):
     detail = {"new": lambda: a.slug, "scaffold": lambda: a.page, "finish": lambda: a.name or "",
               "preview": lambda: " ".join(n.removesuffix(".svg") for n in a.pages) or "all",
               "icons": lambda: f"{len(a.icons)} icons", "photos": lambda: " ".join(a.names),
-              "check": lambda: "early" if a.early else "final"}[a.cmd]()
+              "check": lambda: "early" if a.early else "final",
+              "put": lambda: a.page.removesuffix(".svg")}.get(a.cmd, lambda: "")()
     with open(Path(run_dir) / TIMING, "a", encoding="utf-8") as f:
         f.write(f"{start.isoformat(timespec='seconds')}\t{end.isoformat(timespec='seconds')}\t"
                 f"{(end - start).total_seconds():.0f}\t{a.cmd}\t{status}\t{detail}\n")
@@ -161,15 +165,15 @@ def timing_summary(run_dir):
     # A page's authoring time = its first preview minus the previous page's first preview (or the end of new).
     first_seen, last = {}, new[1]
     for r in rows:
-        if r[3] == "preview" and r[1] <= finishes[0][0]:
+        if r[3] in ("preview", "put") and r[1] <= finishes[0][0]:
             for stem in r[5].split():
                 first_seen.setdefault(stem, r[1])
     for stem, t in sorted(first_seen.items(), key=lambda kv: kv[1]):
         out.append(f"    {stem}：{mins(t - last)}")
         last = t
     checks = [r for r in rows if r[3] == "check"]
-    previews = [r for r in rows if r[3] == "preview"]
-    out.append(f"  其中 preview {len(previews)} 次共 {sum(r[2] for r in previews)} 秒，"
+    previews = [r for r in rows if r[3] in ("preview", "put")]
+    out.append(f"  其中 put/preview {len(previews)} 次共 {sum(r[2] for r in previews)} 秒，"
                f"check {len(checks)} 次共 {sum(r[2] for r in checks)} 秒")
     out.append(f"  finish {len(finishes)} 次：" + "、".join(f"{r[2]} 秒" for r in finishes))
     if len(finishes) > 1:
@@ -230,12 +234,94 @@ def cmd_scaffold(a):
         svg = svg.replace(key, escape(value))
     svg = svg.replace('viewBox="0 0 1280 720"', 'viewBox="0 0 1280 720" lang="zh-CN"', 1)
     svg = svg.replace('  <rect id="master-background"', PAGE_DEFS + '  <rect id="master-background"', 1)
-    svg = svg.replace("</svg>", "\n  <!-- body: Slide-local groups from here (y 166–672 with thesis, 96–672 without) -->\n</svg>")
+    svg = svg.replace("</svg>", f"\n  {BODY_ANCHOR}{BODY_HINT}\n</svg>")
     out.write_text(svg, encoding="utf-8")
     cjk = len(re.findall(r"[\u3000-\u9fff\uff00-\uffef]", a.title))
     if cjk > 20:
         print(f"[WARN] title has {cjk} CJK characters (> 20): follow page-patterns 四 for long titles")
     print(f"PAGE={out}  (layout {layout}; section={values['{{SECTION_NAME}}']!r}, footer={footer!r})")
+
+
+BODY_ANCHOR = "<!-- body: Slide-local groups"
+BODY_HINT = " from here (y 166–672 with thesis, 96–672 without) -->"
+# One preset per marker line in a hand-written body:
+#   <!--P chevron st1 360 204 165.67 52 #16365F [stroke=#HEX sw=1 op=0.5 adj=val 15000 adj1=val -56000] -->
+# preset, id, frame x y w h, fill; stroke / sw (stroke width) / op (fill opacity); anything else is a DrawingML adjustment.
+PRESET_MARK = re.compile(r"<!--P (\S+) (\S+) ([\d.\-]+) ([\d.\-]+) ([\d.]+) ([\d.]+) (\S+)(.*?) *-->")
+
+
+def expand_presets(body):
+    """Replace every preset marker with the verbatim fragment printed by preset_shape_svg.py render-batch."""
+    items = []
+    for m in PRESET_MARK.finditer(body):
+        preset, pid, x, y, w, h, fill, rest = m.groups()
+        item = {"preset": preset, "id": pid, "frame": [float(v) for v in (x, y, w, h)], "fill": fill}
+        adjust = {}
+        for key, value in re.findall(r" ([^=\s]+)=(.+?)(?= [^=\s]+=|$)", rest):
+            value = value.strip()
+            if key == "stroke":
+                item["stroke"] = value
+            elif key == "sw":
+                item["stroke_width"] = float(value)
+            elif key == "op":
+                item["fill_opacity"] = float(value)
+            else:
+                adjust[key] = value
+        if adjust:
+            item["adjustments"] = adjust
+        items.append(item)
+    if not items:
+        return body, 0
+    ids = [i["id"] for i in items]
+    if len(set(ids)) != len(ids):
+        sys.exit(f"duplicate preset ids: {sorted({i for i in ids if ids.count(i) > 1})}")
+    res = subprocess.run([sys.executable, PM / "scripts" / "preset_shape_svg.py", "render-batch", "--input", "-"],
+                         input=json.dumps(items), capture_output=True, text=True, encoding="utf-8")
+    if res.returncode or not res.stdout.strip():
+        sys.exit(f"preset render failed:\n{res.stderr}")
+    frags = {re.match(r'<g id="([^"]+)"', f).group(1): f
+             for f in re.findall(r'<g id="[^"]+" data-pptx-authoring="preset".*?</g>', res.stdout, re.S)}
+    return PRESET_MARK.sub(lambda m: frags[m.group(2)], body), len(items)
+
+
+def cmd_put(a):
+    """Paste a hand-written body after the scaffolded frame (replacing any earlier body), presets expanded."""
+    project = Path(a.project).resolve()
+    stem = a.page.removesuffix(".svg")
+    page = project / "svg_output" / f"{stem}.svg"
+    src = Path(a.body) if a.body else project / "body" / f"{stem}.svg"
+    if not page.exists():
+        sys.exit(f"{page.name} not found; run scaffold first")
+    if not src.exists():
+        sys.exit(f"body file not found: {src}")
+    body, n = expand_presets(src.read_text(encoding="utf-8"))
+    svg = page.read_text(encoding="utf-8")
+    if BODY_ANCHOR not in svg:
+        sys.exit(f"{page.name} has no body anchor comment; re-run scaffold --force")
+    head, tail = svg.split(BODY_ANCHOR, 1)
+    page.write_text(f"{head}{BODY_ANCHOR}{tail.split(chr(10), 1)[0]}\n{body.rstrip()}\n</svg>\n", encoding="utf-8")
+    print(f"PUT={page}  ({n} preset(s) from {src.name})")
+    if not a.no_preview:
+        a.pages = [stem]
+        cmd_preview(a)
+
+
+def page_check(project, page):
+    """Single-page ppt-master gate plus a missing-icon scan; prints only what needs attention."""
+    res = subprocess.run([sys.executable, PM / "scripts" / "svg_quality_checker.py", project, "--quick-generate",
+                          "--canonical-authoring", "--stage", "page", "--page", page.name],
+                         capture_output=True, text=True, encoding="utf-8", errors="replace",
+                         env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    # Expected on every page: the OPPOSans font notice (repaired after export) and compact-style advice;
+    # the summary counters are dropped too. A missing icon shows up as "Project-local icon not found" (fix: icons).
+    noise = ("non-PPT-safe typeface", "Noncanonical compact authoring", "unsafe_exported_faces", "portability",
+             "With warnings:", "With errors:", "Fully passed:")
+    findings = [ln.strip() for ln in res.stdout.splitlines()
+                if re.match(r"\s+\[(ERROR|WARN)\]", ln) and not any(n in ln for n in noise)]
+    if res.returncode and not any(f.startswith("[ERROR]") for f in findings):
+        findings.append(f"[ERROR] checker exit {res.returncode}; run `sam_bain.py check` for the full report")
+    status = "ERROR" if any(f.startswith("[ERROR]") for f in findings) else "WARN" if findings else "OK"
+    print(f"CHECK {page.stem}: {status}" + "".join(f"\n   {f}" for f in findings))
 
 
 def find_browser():
@@ -281,6 +367,45 @@ def cmd_preview(a):
             time.sleep(0.25)
         print(f"PREVIEW={png}" if png.exists() else f"[WARN] no screenshot for {svg.name}")
     shutil.rmtree(work, ignore_errors=True)
+    if not getattr(a, "no_check", False):
+        for page in pages:
+            page_check(project, page)
+
+
+def cmd_measure(a):
+    """Rendered width of each text (checker's estimator); with --max-width, the wrapped lines of one paragraph."""
+    if a.role:
+        roles = {r.split(":")[0]: r.split(":")[1:] for r in ROLES}
+        if a.role not in roles:
+            sys.exit(f"unknown role {a.role}; choose from {', '.join(roles)}")
+        family, size = roles[a.role][0], roles[a.role][1]
+    else:
+        family, size = a.font, a.size
+    if not size:
+        sys.exit("give --role or --size (with --font, default OPPOSans R)")
+    style = ["--size", str(size), "--family", family]
+    if family.endswith((" B", " H")):
+        style += ["--weight", "bold"]
+    script = PM / "scripts" / "text_measure.py"
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    if a.max_width and len(a.text) == 1:
+        res = subprocess.run([sys.executable, script, "wrap", "--json", "--max-width", str(a.max_width), "--x", "0",
+                              "--dy", "1", *style, a.text[0]], capture_output=True, text=True, encoding="utf-8", env=env)
+        if res.returncode:
+            sys.exit(res.stderr)
+        data = json.loads(res.stdout)
+        print(f"{family} {size}px, max {a.max_width}px → {len(data['lines'])} line(s)")
+        for line, width in zip(data["lines"], data["widths"]):
+            print(f"{width:8.1f}  {line}")
+        return
+    res = subprocess.run([sys.executable, script, "measure", "--json", *style, *a.text],
+                         capture_output=True, text=True, encoding="utf-8", env=env)
+    if res.returncode:
+        sys.exit(res.stderr)
+    print(f"{family} {size}px")
+    for item in json.loads(res.stdout):
+        over = f"  OVER by {item['width'] - a.max_width:.1f}" if a.max_width and item["width"] > a.max_width else ""
+        print(f"{item['width']:8.1f}  {item['text']}{over}")
 
 
 def checker(project, stage):
@@ -379,7 +504,22 @@ def main():
     p = sub.add_parser("preview")
     p.add_argument("project")
     p.add_argument("pages", nargs="*", help="page stems; default: every page in svg_output/")
+    p.add_argument("--no-check", action="store_true", help="skip the single-page quality check")
     p.set_defaults(fn=cmd_preview)
+    p = sub.add_parser("put")
+    p.add_argument("project")
+    p.add_argument("page", help="page stem in svg_output/ (already scaffolded)")
+    p.add_argument("body", nargs="?", help="hand-written body file (default: <project>/body/<page>.svg)")
+    p.add_argument("--no-preview", action="store_true", help="paste only; skip preview and page check")
+    p.add_argument("--no-check", action="store_true", help="preview without the page check")
+    p.set_defaults(fn=cmd_put)
+    p = sub.add_parser("measure")
+    p.add_argument("text", nargs="+", help="one or more strings (one paragraph when --max-width wraps)")
+    p.add_argument("--role", help="type role from the calibration table: " + ", ".join(r.split(":")[0] for r in ROLES))
+    p.add_argument("--font", default="OPPOSans R", help="family when --role is not given, e.g. 'OPPOSans M'")
+    p.add_argument("--size", type=float, help="px when --role is not given")
+    p.add_argument("--max-width", type=float, help="flag strings wider than this; with one string, wrap it")
+    p.set_defaults(fn=cmd_measure)
     p = sub.add_parser("check")
     p.add_argument("project")
     p.add_argument("--early", action="store_true")

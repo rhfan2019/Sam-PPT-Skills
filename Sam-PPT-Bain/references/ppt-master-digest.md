@@ -8,7 +8,7 @@
 
 1. `new`：已经跑过 attribution_guard、项目初始化、模板安装、导入大纲、字号校准。**不建** `design_spec.md` / `spec_lock.md`，不走确认环节。
 2. 写页前在脑子里定好这些，不落成文件：逐页的核心信息、关系（顺序 / 连接 / 从属 / 成员 / 对比 / 交叠）、页型、字号和颜色角色。图标集中一次用 `sam_bain.py icons` 同步；一套 deck 只用一个风格库（默认 `chunk-filled`），文件名要先在 `templates/icons/chunk-filled/` 里查到。
-3. 按顺序逐页**手写** SVG。不能交给子代理写，也不能用生成器写正文（`scaffold` 只写模板里的固定页框，正文仍由主 agent 手写）。
+3. 按顺序逐页**手写** SVG。不能交给子代理写，也不能用生成器写正文（`scaffold` 只写模板里的固定页框，`put` 只把手写正文贴进去并展开预设标记，正文仍由主 agent 手写）。
 4. ≥ 7 页时，写完 P05 跑一次 `check --early`；每次检查之间只做一轮集中修复，不要改一处查一次。
 5. 有按数值画的图（柱、点、气泡、折线等），并且被"提升"为核验对象时：带 plot-area 标记，最终检查前用 `svg_position_calculator.py calc …` 核对坐标（见第六节）。
 6. `finish`：final 检查 → 导出（`--quick-generate --no-notes`）→ 修复 OPPOSans 中文字体 → PowerPoint 渲染。不跑 `finalize_svg.py`。
@@ -44,7 +44,7 @@
 - 颜色写大写 `#RRGGBB`，或 `none`、`url(#id)`；透明度用 `fill-opacity` / `stroke-opacity`。
 - 渐变：双色 `linearGradient` 可以直接用。`filter` 只能挂在单个 `rect` / `circle` / `path` / `text` 上，**不能挂在 `<g>` 上**。阴影要淡，`flood-opacity` 取 0.06–0.20，每页最多 2–3 个浮起物体。
 - **箭头标记**：`marker-start` / `marker-end` 只写在 `<line>` / `<path>` 上。marker 里只放一个三顶点 `<polygon>`，`orient="auto"`，**填色必须和这条线的 stroke 一致**，不一致检查器直接报错。所以每种线色配一个 marker：`scaffold` 自带 `arrNavy` #1C4274、`arrRed` #A23424、`arrGray` #8EA9CF、`arrPink` #E3A79C、`arrWhite`；换线色就新增一个 marker。线宽超过 4 px 不挂 marker，改用单独的三角形。
-- **预设形状**：除矩形、圆角矩形、圆、椭圆、直线之外的轮廓（箭形色带 `homePlate` / `chevron`、块箭头、梯形、标注气泡、`mathPlus` / `mathEqual` 等运算符），一律用 `preset_shape_svg.py render-batch --input -` 生成（同一页的全部预设一次批量生成），输出原样粘贴，**不手改 path 和 frame**。预设组可以放进带 bounds 的父组里，文字写在预设组外面。改尺寸就重新生成。整体平移、旋转、翻转可以写在外层 `<g transform>` 上。
+- **预设形状**：除矩形、圆角矩形、圆、椭圆、直线之外的轮廓（箭形色带 `homePlate` / `chevron`、块箭头、梯形、标注气泡、`mathPlus` / `mathEqual` 等运算符），一律用 `preset_shape_svg.py render-batch --input -` 生成（同一页的全部预设一次批量生成），输出原样粘贴（本 Skill 里写成 `<!--P …-->` 标记，由 `sam_bain.py put` 批量生成并替换，见 SKILL.md 第 5 步），**不手改 path 和 frame**。预设组可以放进带 bounds 的父组里，文字写在预设组外面。改尺寸就重新生成。整体平移、旋转、翻转可以写在外层 `<g transform>` 上。
 - 预设只接受纯色填充；要渐变就用普通 SVG 图元。
 - 用 `shape_boolean_svg.py` 做合并、相减、交集。手写 `<path>` / `<polygon>` 是最后一级手段，按数值画的折线（`polyline`）不在此列。
 - 图标写成 `<use data-icon="chunk-filled/名称" x y width height fill="#HEX"/>`，图标必须已经同步到项目的 `icons/` 里。

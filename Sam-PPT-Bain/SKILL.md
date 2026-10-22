@@ -29,7 +29,9 @@ python scripts/sam_bain.py new <slug> --source <大纲.md>      # 建运行目�
 python scripts/sam_bain.py photos <PROJECT> city_tech.png ...  # 需要时复制素材照片（assets/photos/）
 python scripts/sam_bain.py icons  <PROJECT> chunk-filled/bolt ...  # 同步图标（一套 deck 只用一个图标库）
 python scripts/sam_bain.py scaffold <PROJECT> 03_xxx --title "…" [--thesis "…"] [--sample-data] [--source-note "…"]  # 写好一页的固定页框，正文留空
-python scripts/sam_bain.py preview <PROJECT> 03_xxx ...       # 浏览器快速截图（含图标）→ <PROJECT>/preview/*.png
+python scripts/sam_bain.py measure "文字" ... --role body [--max-width 300]  # 先量后定框：宽度 / 超宽提示 / 按宽度断行
+python scripts/sam_bain.py put <PROJECT> 03_xxx [正文.svg]     # 把手写正文（默认 <PROJECT>/body/03_xxx.svg）贴进页框，展开预设标记，接着 preview
+python scripts/sam_bain.py preview <PROJECT> 03_xxx ...       # 浏览器快速截图（含图标）→ <PROJECT>/preview/*.png，并做单页检查
 python scripts/sam_bain.py check  <PROJECT> --early          # ≥7 页时，写完 P05 后跑一次
 python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → 导出 → 字体修复 → 渲染 → contact.png
 ```
@@ -46,7 +48,11 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
    | 左下页脚 | 大纲标了"示例数据"时用"示例数据，不作为真实统计引用"（rules.md 一.4）→ 否则用大纲头部的"说明"原句 → 都没有就留空。大纲给了"来源 / 脚注"（全局或每页）时，接在上面那句后面一起放进页脚 |
    | 右下署名 | 大纲头部的"机构" → 没有就留空 |
    | 封面署名 / 日期 | 大纲头部的"机构" / "日期" |
-5. **逐页写 SVG**（主 agent 自己写，按顺序）：先用 `scaffold` 写好页框（标题、章节标签、页脚、署名按上表从大纲头部取值，`--sample-data` / `--source-note` / `--section` 覆盖；有论点条时传 `--thesis` 用 `04b`），再在文件末尾的注释处手写正文组；按 page-patterns 对应页型构图。每写完一页跑 `preview` 看截图，对照 rules.md 的自检清单，当场修。`preview` 只是浏览器预览，字体度量与 PowerPoint 略有差异，最终以 `finish` 的渲染图为准。
+5. **逐页写 SVG**（主 agent 自己写，按顺序）：先用 `scaffold` 写好页框（标题、章节标签、页脚、署名按上表从大纲头部取值，`--sample-data` / `--source-note` / `--section` 覆盖；有论点条时传 `--thesis` 用 `04b`），再把正文组手写在 `<PROJECT>/body/<页名>.svg`，用 `put` 贴进页框（重复 `put` 会替换上一版正文）；按 page-patterns 对应页型构图。
+   - 预设形状（箭形色带、块箭头、梯形、气泡、运算符）在正文里写成一行标记 `<!--P chevron st1 360 204 165.67 52 #16365F -->`（预设名、id、x y w h、填色；可选 `stroke=#HEX sw=1 op=0.5`，其余 `名=公式` 是调整值，如 `adj=val 15000`），`put` 会一次批量调用 `preset_shape_svg.py render-batch` 原样替换。翻转、旋转写在标记外层的 `<g transform>` 上。
+   - 定框前先用 `measure` 量字：给角色（`--role body` 等，同校准表）或 `--font --size`；加 `--max-width` 时标出超宽的串，只给一串时按宽度断行。
+   - `put` / `preview` 截图后会跑单页检查，只打印需要处理的项（`CHECK 页名: OK / WARN / ERROR`），OPPOSans 字体提示等预期内的项已过滤。它能抓出越过模块 bounds 或画布、缺图标、结构错误；**抓不出文字溢出自己的小框或胶囊**，这类问题仍要看截图。
+   - 每写完一页看截图，对照 rules.md 的自检清单，当场修。`preview` 只是浏览器预览，字体度量与 PowerPoint 略有差异，最终以 `finish` 的渲染图为准。
 6. **收尾**：`finish` 在 RUN_DIR 下生成 `<文件名>.pptx`、`renders/slide-NN.png` 和 `contact.png`，最后打印一个"成品"区块（PPTX 绝对路径、渲染图目录、总览图路径）。**必须逐页看渲染图**（放大看对齐、遮挡、溢出），有问题改 SVG 后重跑 `finish`。
    - 每条命令都会往 `RUN_DIR\timing.log` 追加一行起止时间；`finish` 结束时据此打印"耗时"区块（建项目、逐页编写、每页耗时、preview/check/finish 次数、返修时长）。用户问耗时就引用这个区块；`new` 之前读文档的时间不在日志里。
    - 成品 PPTX 正被 PowerPoint 打开时，`finish` 会自动另存为 `<文件名>-v2.pptx`、`-v3`……，以成品区块打印的路径为准。
