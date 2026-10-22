@@ -8,6 +8,7 @@
 | `series1-ecom/outline.md` | 系列一：电商广告主商业价值报告，12 页 | 首轮已达标（用户认可），待在新会话复现 |
 | `series2-nev/outline.md` | 系列二：新能源汽车商业价值报告，16 页 | 待测 |
 | `series3-xhs/outline.md` | 系列三：小红书媒体价值洞察白皮书，14 页 | 待测 |
+| `series9-ddmr/outline.md` | 系列九：Nature 论文解读《多巴胺驱动母体大脑的持续重塑》，10 页 | 待测 |
 
 大纲只写内容与逻辑关系，不写版式，由 Skill 自行决定构图。
 
