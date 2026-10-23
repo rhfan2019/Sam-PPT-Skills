@@ -1,6 +1,6 @@
 ---
 name: Sam-PPT-Bain
-description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海军蓝 + 砖红、OPPOSans、论点条 + 区块标签 + 主图两翼 + 证据框 + 框架条）生成可编辑 PPTX。底层引擎是 ppt-master（Quick Generate + 本 Skill 自带的 Deck/Style 模板），本 Skill 只固化风格、规则和收尾步骤。用户给出大纲要求做成 PPT、提到 Sam-PPT-Bain、贝恩风格、蓝红咨询模板、咨询白皮书风格时使用。每次运行输出到 Skill 目录之外（系统临时目录下）独立的 run-yyyymmdd-hhmmss-fff 目录，并用 PowerPoint 渲染自检。不负责写大纲。
+description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海军蓝 + 砖红、OPPOSans、结论标题 + 论点条 + 一个有体积感的主视觉与围绕它的配角）生成可编辑 PPTX。底层引擎是 ppt-master（Quick Generate + 本 Skill 自带的 Deck/Style 模板），本 Skill 只固化风格、规则和收尾步骤。用户给出大纲要求做成 PPT、提到 Sam-PPT-Bain、贝恩风格、蓝红咨询模板、咨询白皮书风格时使用。每次运行输出到 Skill 目录之外独立的 run-yyyymmdd-hhmmss-fff 目录，并用 PowerPoint 渲染自检。不负责写大纲。
 ---
 
 # Sam-PPT-Bain
