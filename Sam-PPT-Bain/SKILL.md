@@ -20,7 +20,7 @@ description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海�
 1. `references/rules.md` —— 用户的硬规则（不加词、推算值要列出、对齐与边界、只有用户能确认样张）。全文读。
 2. `references/quick-card.md` —— page-patterns 的压缩速查（坐标、字号、构件尺寸、关系 → 构造一行表、版面纪律）。**替代通读 `references/page-patterns.md`**：本次第一次用到某个构造、或速查卡写得不够时，按卡上的 §号去读 page-patterns 原文那一节。
 3. `references/ppt-master-digest.md` —— ppt-master 执行规则速查（分组与 bounds、箭头颜色、预设形状、结构化 slot、图表核验），替代通读插件执行核心；`new` 提示插件版本不符时改读原文档。
-4. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型）。
+4. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型），再读 `references/approved/samples.md`，并看其中和本次大纲页型相关的正文页样张 `sample-*.png`（用户 2026-10-23 选定的风格样张，学质感和层次，不照抄构图）。
 
 **独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲、本 Skill 目录里的文件和 ppt-master 插件文档；不读取其他任何文件、目录、历史运行结果或 git 历史。
 
