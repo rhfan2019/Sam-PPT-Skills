@@ -2,8 +2,8 @@
 
 ppt-master does the work (project layout, template install, typography calibration,
 SVG checks, native PPTX export); this script only fixes the Sam-PPT-Bain choices:
-the run folder convention (outside the Skill folder, under the system temp dir
-or $SAM_PPT_RUNS), the installed template, the recurring type roles, the
+the run folder convention (outside the repo, under the test workspace's runs
+folder, the system temp dir or $SAM_PPT_RUNS), the installed template, the recurring type roles, the
 OPPOSans CJK repair after export, and the PowerPoint render check.
 
   python sam_bain.py start                                 mark the start of a run (reading the docs is timed too)
@@ -37,10 +37,14 @@ import components
 SKILL = Path(__file__).resolve().parent.parent
 TEMPLATE = SKILL / "template"
 PHOTOS = SKILL / "assets" / "photos"
-# Run folders live outside the Skill folder so a run never sits next to the rules
-# (and blind runs cannot browse each other through the Skill tree).
+# Run folders live outside the repo so a run never sits next to the rules
+# (and blind runs cannot browse each other through the Skill tree). The test
+# workspace's runs folder is the default; the system temp dir is the fallback
+# on machines without it.
+TEST_RUNS = Path(r"D:\Workspace\Sam-PPT-Skills-Test\runs")
 RUNS = Path(os.environ.get("SAM_PPT_RUNS")
-            or Path(tempfile.gettempdir()) / "claude" / "Sam-PPT-Runs" / "Sam-PPT-Bain")
+            or (TEST_RUNS if TEST_RUNS.is_dir()
+                else Path(tempfile.gettempdir()) / "claude" / "Sam-PPT-Runs") / "Sam-PPT-Bain")
 
 # Recurring type roles of the Sam Bain deck (family:size in px on the 1280x720 canvas).
 ROLES = [

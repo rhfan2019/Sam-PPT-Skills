@@ -16,7 +16,7 @@
 ## 测试方式（三角色隔离）
 
 1. **编排会话**：把要测的大纲复制到中性路径（如 `D:\Workspace\tmp\<case>-outline.md`），按批（每批 4 页）启动生成子代理；拿到评分子代理的通用建议后改 Skill、提交推送。编排会话不打开评分工具包。
-2. **生成子代理**（每轮新开）：只用 Skill 和大纲副本生成页面。提示里写明：不得读取仓库 git 历史、`HANDOVER.md`、`benchmarks/` 下除大纲副本外的内容、运行根（`%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\`）下别人的运行目录，不得修改 Skill、不得 commit。
+2. **生成子代理**（每轮新开）：只用 Skill 和大纲副本生成页面。提示里写明：不得读取仓库 git 历史、开发记录、`benchmarks/` 下除大纲副本外的内容、运行根（`D:\Workspace\Sam-PPT-Skills-Test\runs\Sam-PPT-Bain\`）下别人的运行目录，不得修改 Skill、不得 commit。
 3. **评分子代理**（每轮新开）：唯一能打开评分工具包的角色；按工具包里的流程对比、打分，只回报**通用**改进建议。
 
 每批最多 3 轮；达标线：每页总分 ≥ 16（满分 20）且没有 0 分项。

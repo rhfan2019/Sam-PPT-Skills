@@ -100,5 +100,5 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
 
 - Windows + PowerPoint（渲染）+ OPPOSans 字体；Python 3.12（命令用 `python`，不是 `python3`）。
 - ppt-master 插件位置自动查找（`~/.claude/plugins/cache/ppt-master/...`），可用环境变量 `PPT_MASTER_DIR` 指定。
-- **运行根**：默认是 `<系统临时目录>\claude\Sam-PPT-Runs\Sam-PPT-Bain\`（`tempfile.gettempdir()` 拼出，Windows 上一般是 `%LOCALAPPDATA%\Temp\claude\Sam-PPT-Runs\Sam-PPT-Bain\`），可用环境变量 `SAM_PPT_RUNS` 覆盖。运行目录一律以 `new` 打印的 `RUN_DIR=` 为准；不要读取运行根下其他运行的目录。
+- **运行根**：默认是 `D:\Workspace\Sam-PPT-Skills-Test\runs\Sam-PPT-Bain\`；本机没有 `D:\Workspace\Sam-PPT-Skills-Test\runs` 时退回 `<系统临时目录>\claude\Sam-PPT-Runs\Sam-PPT-Bain\`；可用环境变量 `SAM_PPT_RUNS` 覆盖。运行目录一律以 `new` 打印的 `RUN_DIR=` 为准；不要读取运行根下其他运行的目录。
 - Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`；Windows 长路径会让 Python 起不来，临时文件放短路径。
