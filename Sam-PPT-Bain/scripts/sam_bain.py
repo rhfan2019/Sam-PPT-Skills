@@ -6,11 +6,13 @@ the run folder convention (outside the Skill folder, under the system temp dir
 or $SAM_PPT_RUNS), the installed template, the recurring type roles, the
 OPPOSans CJK repair after export, and the PowerPoint render check.
 
+  python sam_bain.py start                                 mark the start of a run (reading the docs is timed too)
   python sam_bain.py new <slug> [--source outline.md ...]   create <runs>/run-*/<slug>_<date>/
   python sam_bain.py photos <project> city_tech.png ...     copy stock photos into images/
   python sam_bain.py icons <project> chunk-filled/bolt ...  sync library icons into icons/
   python sam_bain.py scaffold <project> 03_name --title ... [--thesis ...]  page frame only, body left empty
-  python sam_bain.py put <project> 03_name [body.svg]      paste the hand-written body (<!--P ...--> presets expanded), then preview
+  python sam_bain.py put <project> 03_name [body.svg]      paste the hand-written body (<!--C/T/P ...--> markers expanded,
+                                                            bounds="auto" measured, body lint), then preview
   python sam_bain.py preview <project> [03_name ...]        quick browser screenshots into preview/ + single-page check
   python sam_bain.py measure "文字" ... --role body [--max-width 300]  rendered width / wrapped lines
   python sam_bain.py check <project> [--early]              ppt-master SVG quality gate
@@ -29,6 +31,8 @@ import tempfile
 import time
 from pathlib import Path
 from xml.sax.saxutils import escape
+
+import components
 
 SKILL = Path(__file__).resolve().parent.parent
 TEMPLATE = SKILL / "template"
@@ -90,6 +94,7 @@ def ppt_master_dir():
 
 
 PM = ppt_master_dir()
+components.init(PM)
 
 
 def run(args, check=True):
@@ -110,7 +115,23 @@ def ppt_master_version():
     return m.group(1) if m else "unknown"
 
 
+START_MARK = RUNS / ".start"
+
+
+def cmd_start(a):
+    """Remember when the run began, so the doc reading before `new` lands in timing.log."""
+    RUNS.mkdir(parents=True, exist_ok=True)
+    START_MARK.write_text(dt.datetime.now().isoformat(timespec="seconds"), encoding="utf-8")
+    print(f"START={START_MARK.read_text(encoding='utf-8')}")
+
+
 def cmd_new(a):
+    started = None
+    if START_MARK.exists():
+        started = dt.datetime.fromisoformat(START_MARK.read_text(encoding="utf-8").strip())
+        START_MARK.unlink()
+        if dt.datetime.now() - started > dt.timedelta(hours=6):
+            started = None
     pm("attribution_guard.py")
     version = ppt_master_version()
     if version != DIGEST_VERSION:
@@ -128,6 +149,10 @@ def cmd_new(a):
         pm("project_manager.py", "import-sources", project, *a.source, "--copy")
     pm("text_measure.py", "calibrate", project, *[x for r in ROLES for x in ("--role", r)])
     a.run_dir = run_dir
+    if started:
+        with open(run_dir / TIMING, "a", encoding="utf-8") as f:
+            f.write(f"{started.isoformat(timespec='seconds')}\t{a.started.isoformat(timespec='seconds')}\t"
+                    f"{(a.started - started).total_seconds():.0f}\tstart\tok\tread docs + plan\n")
     print(f"\nRUN_DIR={run_dir}\nPROJECT={project}")
 
 
@@ -141,7 +166,7 @@ def log_timing(run_dir, a, start, end, status):
               "preview": lambda: " ".join(n.removesuffix(".svg") for n in a.pages) or "all",
               "icons": lambda: f"{len(a.icons)} icons", "photos": lambda: " ".join(a.names),
               "check": lambda: "early" if a.early else "final",
-              "put": lambda: a.page.removesuffix(".svg")}.get(a.cmd, lambda: "")()
+              "put": lambda: a.page.removesuffix(".svg"), "start": lambda: ""}.get(a.cmd, lambda: "")()
     with open(Path(run_dir) / TIMING, "a", encoding="utf-8") as f:
         f.write(f"{start.isoformat(timespec='seconds')}\t{end.isoformat(timespec='seconds')}\t"
                 f"{(end - start).total_seconds():.0f}\t{a.cmd}\t{status}\t{detail}\n")
@@ -158,9 +183,16 @@ def timing_summary(run_dir):
     finishes = [r for r in rows if r[3] == "finish" and r[4] == "ok"]
     if not new or not finishes:
         return ""
-    out = ["", "=" * 72, f"耗时（timing.log；不含 new 之前读文档的时间）",
-           f"总计（new 开始 → 本次 finish 结束）：{mins(finishes[-1][1] - new[0])}",
-           f"  建项目 new：{new[2]} 秒",
+    start = next((r for r in rows if r[3] == "start"), None)
+    head = ["", "=" * 72]
+    if start:
+        head += ["耗时（timing.log，从 start 起）",
+                 f"总计（start → 本次 finish 结束）：{mins(finishes[-1][1] - start[0])}",
+                 f"  读文档 + 规划（start → new）：{mins(start[1] - start[0])}"]
+    else:
+        head += ["耗时（timing.log；没有跑 start，不含 new 之前读文档的时间）",
+                 f"总计（new 开始 → 本次 finish 结束）：{mins(finishes[-1][1] - new[0])}"]
+    out = head + [f"  建项目 new：{new[2]} 秒",
            f"  逐页编写（new 结束 → 第一次 finish 开始）：{mins(finishes[0][0] - new[1])}"]
     # A page's authoring time = its first preview minus the previous page's first preview (or the end of new).
     first_seen, last = {}, new[1]
@@ -193,7 +225,16 @@ def cmd_photos(a):
 
 
 def cmd_icons(a):
-    pm("icon_sync.py", a.project, *a.icons)
+    """Sync the icons that exist; a misspelt name is reported with near matches instead of failing the batch."""
+    lib_root = PM / "templates" / "icons"
+    found, missing = [], []
+    for name in a.icons:
+        (found if (lib_root / f"{name}.svg").exists() else missing).append(name)
+    if found:
+        pm("icon_sync.py", a.project, *found)
+    for name in missing:
+        near = components.suggest_icons(name, lib_root / (name.split("/")[0] if "/" in name else "chunk-filled"))
+        print(f"[MISSING] {name}: not in the library" + (f"; near: {', '.join(near)}" if near else ""))
 
 
 def outline_header(project):
@@ -294,13 +335,21 @@ def cmd_put(a):
         sys.exit(f"{page.name} not found; run scaffold first")
     if not src.exists():
         sys.exit(f"body file not found: {src}")
-    body, n = expand_presets(src.read_text(encoding="utf-8"))
+    source = src.read_text(encoding="utf-8")
+    try:
+        body, nc = components.expand_components(source)
+        body, n = expand_presets(body)
+        body, nb = components.auto_bounds(body)
+    except components.BodyError as e:
+        sys.exit(f"[ERROR] {e}")
     svg = page.read_text(encoding="utf-8")
     if BODY_ANCHOR not in svg:
         sys.exit(f"{page.name} has no body anchor comment; re-run scaffold --force")
     head, tail = svg.split(BODY_ANCHOR, 1)
     page.write_text(f"{head}{BODY_ANCHOR}{tail.split(chr(10), 1)[0]}\n{body.rstrip()}\n</svg>\n", encoding="utf-8")
-    print(f"PUT={page}  ({n} preset(s) from {src.name})")
+    print(f"PUT={page}  ({n} preset(s), {nc} component marker(s), {nb} auto bound(s) from {src.name})")
+    for finding in components.lint_body(source, body, 'data-pptx-layout="content_thesis"' in svg):
+        print(f"LINT {stem}: {finding}")
     if not a.no_preview:
         a.pages = [stem]
         cmd_preview(a)
@@ -452,6 +501,9 @@ def cmd_finish(a):
     run_dir = project.parent
     if checker(project, "final") != 0:
         sys.exit("final SVG check failed; fix the reported pages and rerun finish")
+    for names in components.skeleton_report(sorted((project / "svg_output").glob("*.svg"))):
+        print(f"[WARN] same root-group skeleton on {len(names)} pages ({', '.join(names)}): "
+              f"the deck starts to read as a template — vary the construction (page-patterns 三B)")
     export_args = ["--quick-generate", "--no-notes"]
     if a.native_charts:
         export_args.append("--native-charts-and-tables")
@@ -477,6 +529,8 @@ def cmd_finish(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("start")
+    p.set_defaults(fn=cmd_start)
     p = sub.add_parser("new")
     p.add_argument("slug", help="ASCII project slug, e.g. demo-report")
     p.add_argument("--source", nargs="*", help="outline or source files to import into sources/")
@@ -532,6 +586,7 @@ def main():
     p.set_defaults(fn=cmd_finish)
     a = ap.parse_args()
     start, status = dt.datetime.now(), "ok"
+    a.started = start
     try:
         a.fn(a)
     except BaseException as e:

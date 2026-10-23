@@ -230,6 +230,7 @@
 
 **箭头与变换**
 - `marker-start` / `marker-end` 只能写在 `<line>` / `<path>` 上，写在 `<g>` 上会报错。
+- **一条带箭头的 path 只能有一个 `M`**：多段（括号、分叉）路径挂 marker 时，PowerPoint 会在每一段末端都画箭头（2026-10-22 series3 的 P05/P08/P14 实测）。括号部分写成不挂 marker 的 path，箭头另写一条 `<line>`；`put` 会报出这类写法。
 - **粗线不挂 marker**：线宽超过 4 px 的线或弧带（如 20–36 px 的转弯弧）挂 `marker-end` 时，导出后箭头会按线宽放大；这类粗线的箭头改用单独的三角形 `<path>`（按线端切线方向计算三个顶点）或 `triangle` 预设，颜色与线一致。
 - **水平镜像**：把要翻转的 preset 片段原样放进一个外层 `<g transform="matrix(-1 0 0 1 W 0)">`（W = 镜像轴 x 的 2 倍），transform 写在这个外层组上，不改 preset 片段本身；外层组放在一个带 `data-pptx-bounds` 的根层组里，bounds 写翻转后的实际位置。
 - `filter`（阴影）只能挂在单个 `circle` / `rect` / `path` / `text` 上，挂在 `<g>` 上导出会失败。
