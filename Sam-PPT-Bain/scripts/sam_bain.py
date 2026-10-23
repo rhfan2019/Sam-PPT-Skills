@@ -80,6 +80,11 @@ PAGE_DEFS = """  <defs>
     <marker id="arrPink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#E3A79C"/></marker>
     <marker id="arrWhite" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#FFFFFF"/></marker>
     <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.14"/></filter>
+    <filter id="tileShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="2" dy="3" stdDeviation="5" flood-color="#000000" flood-opacity="0.08"/></filter>
+    <linearGradient id="gFadeRedUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#F4D1CC"/><stop offset="1" stop-color="#F4D1CC" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gFadeNavyUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#C4D7F1"/><stop offset="1" stop-color="#C4D7F1" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gBoardRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FBEFED"/></linearGradient>
+    <linearGradient id="gBoardNavy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EEF3FA"/></linearGradient>
   </defs>
 """
 

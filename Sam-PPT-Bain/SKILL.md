@@ -21,6 +21,7 @@ description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海�
 2. `references/quick-card.md` —— page-patterns 的压缩速查（坐标、字号、构件尺寸、关系 → 构造一行表、版面纪律）。**替代通读 `references/page-patterns.md`**：本次第一次用到某个构造、或速查卡写得不够时，按卡上的 §号去读 page-patterns 原文那一节。
 3. `references/ppt-master-digest.md` —— ppt-master 执行规则速查（分组与 bounds、箭头颜色、预设形状、结构化 slot、图表核验），替代通读插件执行核心；`new` 提示插件版本不符时改读原文档。
 4. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型），再读 `references/approved/samples.md`，并看其中和本次大纲页型相关的正文页样张 `sample-*.png`（用户 2026-10-23 选定的风格样张，学质感和层次，不照抄构图）。
+5. `references/components/kit.md` —— 构件库（页签面板、图标指标块、人字箭头 + 阶段卡、立体标签、光晕底板、竖排侧标签条），并看 `references/components/kit-a.png`、`kit-b.png`。**每页至少用其中 2 种**，写法直接复制、只改坐标尺寸和文字。
 
 **独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲、本 Skill 目录里的文件和 ppt-master 插件文档；不读取其他任何文件、目录、历史运行结果或 git 历史。
 
@@ -63,6 +64,7 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
      - 每页正文第一行写 `<!--MAIN 主视觉组id-->`（精炼页写 `<!--MAIN id lean-->`）。
      - 主视觉（核心圆、漏斗、色带、曲线、矩阵、交叠圆……）必须用 `<!--P-->` 预设和手写图元构造；`put` 发现主视觉组一半以上是 C 标记、或整页六成以上图形来自 C 标记、或主视觉不到正文区 35% 时会报 `LINT … [WARN]`，见到就按 rules 五"返工时先换构造"重做，不要只调标记。
      - 不新增"卡片格 / 多栏 / 整块版式"类标记；标记只限上面四种原子。
+     - **构件可复用、构图要变化**：`components/kit.md` 的构件是手写 SVG 片段，可以逐页、同页多次复制使用；变化的是整页构图——构件的组合、位置、大小、数量随内容走，相邻两页不要同样的组合摆同样的位置。
      - `finish` 会比对各页根层组的骨架，3 页以上雷同时报警：换构造，不同页用不同的 §三B 关系构造。
    - 根层组的 `data-pptx-bounds` 可以写 `auto`，`put` 按内容实测后写回（+1 px）；手写 bounds 照常可用。`put` 还会报出"带箭头的 path 含多个 M"（PowerPoint 会在每段都画箭头头）和挂在 `<g>` 上的 marker。
    - 定框前先用 `measure` 量字：给角色（`--role body` 等，同校准表）或 `--font --size`；加 `--max-width` 时标出超宽的串，只给一串时按宽度断行。
