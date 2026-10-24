@@ -419,7 +419,8 @@ def suggest_icons(name, lib_dir):
 
 SMALL_PX = 12.01          # below the rules' 13.33 px caption floor
 SMALL_SHARE_MAX = 0.40    # reference deck: ≈ 30–35 % of characters at ≤ 12 px
-MAX_BLOCKS = 4
+MAX_BLOCKS = 5
+MIN_COVER = 0.5          # share of the body under coloured panels / bars (rules 二.8: about 60–75 %)
 CARD_EMPTY_MAX = 1 / 3
 
 
@@ -565,7 +566,7 @@ def layout_lint(body, thesis):
     blocks = len({find(i) for i in range(len(boxes))})
     if blocks > MAX_BLOCKS:
         out.append(f"[WARN] {blocks} separate blocks in the body (> {MAX_BLOCKS}): merge related content groups into "
-                   f"≤ 4 zones and keep every group title (rules 二.12)")
+                   f"3–5 zones and keep every group title (rules 二.12)")
 
     # 2. big numbers
     def numeric(p, size):
@@ -577,12 +578,29 @@ def layout_lint(body, thesis):
             sizes.setdefault(round(p["size"]), []).append(p)
         return sum(1 if len(g) >= 3 else len(g) for g in sizes.values())
     heroes = focal([p for p in texts if numeric(p, 40)])
-    bigs = focal([p for p in texts if numeric(p, 28)])
-    if heroes > 1:
-        out.append(f"[WARN] {heroes} hero numbers (≥ 40 px): keep one, set the rest at 28–32 px (rules 二.12)")
-    if bigs > 3:
-        out.append(f"[WARN] {bigs} big numbers (≥ 28 px): at most 3 per page, the rest in body size with colour "
-                   f"or weight (rules 二.12)")
+    if heroes > 2:
+        out.append(f"[WARN] {heroes} hero numbers (≥ 40 px): keep one or two, set the rest at 28–32 px (rules 二.9)")
+
+    # 2b. colour-block coverage: panels, header bars and dark blocks should fill most of the body
+    cell = 8
+    cols, rows = int((BODY_RIGHT - BODY_LEFT) // cell), int((BODY_BOTTOM - top) // cell)
+    hit = set()
+    for p in prims:
+        if p["tag"] not in ("rect", "path", "polygon") or p["fill"] in (None, "none") or p["fop"] < 0.3:
+            continue
+        lum = _lum(p["fill"])
+        if lum is not None and lum > 0.985:          # white tiles do not count as colour blocks
+            continue
+        x0, y0, x1, y1 = p["box"]
+        if (x1 - x0) * (y1 - y0) < 400:
+            continue
+        for cx in range(max(0, int((x0 - BODY_LEFT) // cell)), min(cols, int((x1 - BODY_LEFT) // cell) + 1)):
+            for cy in range(max(0, int((y0 - top) // cell)), min(rows, int((y1 - top) // cell) + 1)):
+                hit.add((cx, cy))
+    cover = len(hit) / max(cols * rows, 1)
+    if cover < MIN_COVER:
+        out.append(f"[WARN] colour blocks cover {cover:.0%} of the body (< {MIN_COVER:.0%}; target about 60–75 %): "
+                   f"give each zone a dark header bar and a tinted panel instead of hairline boxes on white (rules 二.8)")
 
     # 3. small-text share (characters at ≤ 10 pt)
     total = small = 0
