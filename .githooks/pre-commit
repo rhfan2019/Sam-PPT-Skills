@@ -1,0 +1,6 @@
+#!/bin/sh
+# Refuse commits that break the locked visual style (Sam-PPT-Bain/references/style-lock.md).
+PYTHONIOENCODING=utf-8 python Sam-PPT-Bain/scripts/style_guard.py || {
+  echo "pre-commit: style lock check failed; a locked item needs the user's explicit approval first." >&2
+  exit 1
+}

@@ -104,4 +104,5 @@ python scripts/sam_bain.py finish <PROJECT> --name <文件名>   # 终检 → �
 - Windows + PowerPoint（渲染）+ OPPOSans 字体；Python 3.12（命令用 `python`，不是 `python3`）。
 - ppt-master 插件位置自动查找（`~/.claude/plugins/cache/ppt-master/...`），可用环境变量 `PPT_MASTER_DIR` 指定。
 - **运行根**：默认是 `D:\Workspace\Sam-PPT-Skills-Test\runs\Sam-PPT-Bain\`；本机没有 `D:\Workspace\Sam-PPT-Skills-Test\runs` 时退回 `<系统临时目录>\claude\Sam-PPT-Runs\Sam-PPT-Bain\`；可用环境变量 `SAM_PPT_RUNS` 覆盖。运行目录一律以 `new` 打印的 `RUN_DIR=` 为准；不要读取运行根下其他运行的目录。
+- **运行隔离（硬规则，用户 2026-10-24 定）**：`D:\Workspace\Sam-PPT-Skills-Test` 是测试工作区，里面有参考材料、评分工具、开发记录和别人的运行目录。运行期间**不得读取、列出或搜索其中任何文件**，唯一例外是 `new` 打印的本次 `RUN_DIR`。需要的东西只来自三处：本 Skill 目录、用户给的大纲 / 素材、本次 `RUN_DIR`。用户给的大纲在测试工作区里时，先请用户另存到别处再用；`sam_bain.py` 会拒绝从测试工作区导入大纲，也会拒绝不在运行根下的项目路径。
 - Bash 里跑 Python 输出中文时加 `PYTHONIOENCODING=utf8`；Windows 长路径会让 Python 起不来，临时文件放短路径。

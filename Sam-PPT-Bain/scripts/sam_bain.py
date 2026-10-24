@@ -45,6 +45,32 @@ TEST_RUNS = Path(r"D:\Workspace\Sam-PPT-Skills-Test\runs")
 RUNS = Path(os.environ.get("SAM_PPT_RUNS")
             or (TEST_RUNS if TEST_RUNS.is_dir()
                 else Path(tempfile.gettempdir()) / "claude" / "Sam-PPT-Runs") / "Sam-PPT-Bain")
+# The test workspace also holds the reference deck, the scoring kit, dev notes and other runs.
+# A run may only touch its own run folder there (SKILL.md 运行隔离; user rule 2026-10-24).
+TEST_ROOT = TEST_RUNS.parent
+
+
+def _inside(path, root):
+    try:
+        Path(path).resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def guard_input(path):
+    """Inputs (outline, sources, body files) must not come from the test workspace."""
+    if _inside(path, TEST_ROOT):
+        sys.exit(f"[ERROR] {path} is inside {TEST_ROOT}: runs may not read the test workspace; "
+                 f"copy the outline somewhere neutral (e.g. D:\\Workspace\\tmp) and pass that copy")
+
+
+def guard_project(project):
+    """A project argument must be a project folder inside a run folder under the runs root."""
+    project = Path(project).resolve()
+    if _inside(project, TEST_ROOT) and not (project.parent.name.startswith("run-") and _inside(project, RUNS)):
+        sys.exit(f"[ERROR] {project} is not a run project under {RUNS}: use the PROJECT= path printed by `new`")
+    return project
 
 # Recurring type roles of the Sam Bain deck (family:size in px on the 1280x720 canvas).
 ROLES = [
@@ -141,6 +167,8 @@ def cmd_start(a):
 
 
 def cmd_new(a):
+    if run([sys.executable, SKILL / "scripts" / "style_guard.py"], check=False) != 0:
+        sys.exit("[ERROR] the locked visual style is not intact (references/style-lock.md); stop and tell the user")
     started = None
     if START_MARK.exists():
         started = dt.datetime.fromisoformat(START_MARK.read_text(encoding="utf-8").strip())
@@ -161,6 +189,8 @@ def cmd_new(a):
     project = next(p for p in run_dir.iterdir() if p.is_dir())
     pm("apply_template.py", project, "--root", TEMPLATE)
     if a.source:
+        for src in a.source:
+            guard_input(src)
         pm("project_manager.py", "import-sources", project, *a.source, "--copy")
     pm("text_measure.py", "calibrate", project, *[x for r in ROLES for x in ("--role", r)])
     a.run_dir = run_dir
@@ -230,7 +260,7 @@ def timing_summary(run_dir):
 
 
 def cmd_photos(a):
-    project = Path(a.project)
+    project = guard_project(a.project)
     for name in a.names:
         src = PHOTOS / name
         if not src.exists():
@@ -304,7 +334,7 @@ def fit_title(title, section=""):
 
 def cmd_scaffold(a):
     """Write the fixed page frame of one content page; the body stays for hand authoring."""
-    project = Path(a.project).resolve()
+    project = guard_project(a.project)
     out = project / "svg_output" / f"{a.page}.svg"
     if out.exists() and not a.force:
         sys.exit(f"{out.name} already exists; pass --force to overwrite it")
@@ -382,10 +412,12 @@ def expand_presets(body):
 
 def cmd_put(a):
     """Paste a hand-written body after the scaffolded frame (replacing any earlier body), presets expanded."""
-    project = Path(a.project).resolve()
+    project = guard_project(a.project)
     stem = a.page.removesuffix(".svg")
     page = project / "svg_output" / f"{stem}.svg"
     src = Path(a.body) if a.body else project / "body" / f"{stem}.svg"
+    if a.body and not _inside(src, project):
+        guard_input(src)
     if not page.exists():
         sys.exit(f"{page.name} not found; run scaffold first")
     if not src.exists():
@@ -441,7 +473,7 @@ def find_browser():
 
 def cmd_preview(a):
     """Browser screenshots of draft pages, icons expanded; PowerPoint rendering stays in finish."""
-    project = Path(a.project).resolve()
+    project = guard_project(a.project)
     pages = [project / "svg_output" / f"{n.removesuffix('.svg')}.svg" for n in a.pages] \
         or sorted((project / "svg_output").glob("*.svg"))
     missing = [p.name for p in pages if not p.exists()]
@@ -553,7 +585,7 @@ def free_deck_path(run_dir, stem):
 
 
 def cmd_finish(a):
-    project = Path(a.project).resolve()
+    project = guard_project(a.project)
     run_dir = project.parent
     if checker(project, "final") != 0:
         sys.exit("final SVG check failed; fix the reported pages and rerun finish")
