@@ -267,6 +267,27 @@ def outline_header(project):
     return header
 
 
+TITLE_MAX = 880  # title slot width; the section label on the right starts after it
+TITLE_SIZES = (37.33, 34.67, 32)
+TITLE_PUNCT = "，、；：。,;:"
+
+
+def fit_title(title):
+    """(title, size, removed): one line only; step the size down, then cut the tail (user rule 2026-10-23)."""
+    for size in TITLE_SIZES:
+        if components.text_width(title, size, "OPPOSans H") <= TITLE_MAX:
+            return title, size, ""
+    cut = title
+    while cut and components.text_width(cut, TITLE_SIZES[-1], "OPPOSans H") > TITLE_MAX:
+        cut = cut[:-1]
+    # end on a clause boundary when one is close to the cut, so the kept part reads as a phrase
+    stop = max(cut.rfind(p) for p in TITLE_PUNCT)
+    if stop >= len(cut) * 0.6:
+        cut = cut[:stop]
+    cut = cut.rstrip(TITLE_PUNCT + " ")
+    return cut, TITLE_SIZES[-1], title[len(cut):]
+
+
 def cmd_scaffold(a):
     """Write the fixed page frame of one content page; the body stays for hand authoring."""
     project = Path(a.project).resolve()
@@ -278,23 +299,27 @@ def cmd_scaffold(a):
     footer = SAMPLE_DATA_FOOTER if a.sample_data else (a.footer if a.footer is not None else header.get("说明", ""))
     if a.source_note:
         footer += a.source_note
+    title, title_size, removed = fit_title(a.title)
     values = {
-        "{{PAGE_TITLE}}": a.title,
+        "{{PAGE_TITLE}}": title,
         "{{SECTION_NAME}}": a.section if a.section is not None else header.get("页眉标签", ""),
         "{{KEY_MESSAGE}}": a.thesis or "",
         "{{SOURCE}}": footer,
         "{{AUTHOR}}": a.author if a.author is not None else header.get("机构", ""),
     }
     svg = (project / "templates" / f"{layout}.svg").read_text(encoding="utf-8")
+    svg = svg.replace('font-size="37.33">{{PAGE_TITLE}}', f'font-size="{title_size:g}">{{{{PAGE_TITLE}}}}', 1)
     for key, value in values.items():
         svg = svg.replace(key, escape(value))
     svg = svg.replace('viewBox="0 0 1280 720"', 'viewBox="0 0 1280 720" lang="zh-CN"', 1)
     svg = svg.replace('  <rect id="master-background"', PAGE_DEFS + '  <rect id="master-background"', 1)
     svg = svg.replace("</svg>", f"\n  {BODY_ANCHOR}{BODY_HINT}\n</svg>")
     out.write_text(svg, encoding="utf-8")
-    cjk = len(re.findall(r"[\u3000-\u9fff\uff00-\uffef]", a.title))
-    if cjk > 20:
-        print(f"[WARN] title has {cjk} CJK characters (> 20): follow page-patterns 四 for long titles")
+    if removed:
+        print(f"[WARN] title cut to one line at {title_size:g}px; removed {removed!r} — list the original title and "
+              f"the removed part in the delivery note")
+    elif title_size != TITLE_SIZES[0]:
+        print(f"[INFO] long title set at {title_size:g}px to stay on one line")
     print(f"PAGE={out}  (layout {layout}; section={values['{{SECTION_NAME}}']!r}, footer={footer!r})")
 
 
