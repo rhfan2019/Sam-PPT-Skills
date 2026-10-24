@@ -27,7 +27,7 @@
       text-anchor="end" fill="#0E213A" font-family="OPPOSans M, Microsoft YaHei, sans-serif"
       font-size="14.67">{{SECTION_NAME}}</text>
   </g>
-  <g id="footer-slot" data-pptx-placeholder="footer" data-pptx-idx="4" data-pptx-bounds="35.93 690 420 15">
+  <g id="footer-slot" data-pptx-placeholder="footer" data-pptx-idx="4" data-pptx-bounds="35.93 690 880 15">
     <text id="footer-carrier" data-pptx-carrier="true" x="35.93" y="701.2"
       fill="#000000" font-family="OPPOSans L, Microsoft YaHei, sans-serif"
       font-size="8">{{SOURCE}}</text>

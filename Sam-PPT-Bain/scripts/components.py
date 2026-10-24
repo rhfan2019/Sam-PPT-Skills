@@ -631,6 +631,10 @@ def layout_lint(body, thesis):
             continue
         if not filled and r["stroke"] in (None, "none"):
             continue
+        # a series of equal-width rects in one module is a bar chart, not a set of cards
+        if sum(1 for q in prims if q is not r and q["tag"] == "rect" and q["root"] == r["root"]
+               and abs((q["box"][2] - q["box"][0]) - w) < 1) >= 2:
+            continue
         inner = [q for q in prims if q["z"] > r["z"] and _inside(_centre(q["box"]), r["box"])
                  and (q["box"][2] - q["box"][0]) * (q["box"][3] - q["box"][1]) < w * h * 0.9]
         if not inner:
