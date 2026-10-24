@@ -267,24 +267,38 @@ def outline_header(project):
     return header
 
 
-TITLE_MAX = 880  # title slot width; the section label on the right starts after it
+# Title fitting (calibrated 2026-10-23 against PowerPoint renders: OPPOSans H renders at ~0.945 of the
+# checker's estimate). The title slot of 04a / 04b is 990 px wide; the real limit is the section label on
+# the right, so the room is measured per page and the estimate may never exceed the slot.
+TITLE_SLOT_X, TITLE_SLOT_W = 80.7, 990
+TITLE_RENDER_RATIO = 0.945
+TITLE_GAP = 24  # visible gap kept before the right-aligned section label
 TITLE_SIZES = (37.33, 34.67, 32)
 TITLE_PUNCT = "，、；：。,;:"
+TITLE_DANGLING = "与和及并或的而且、"  # a cut never ends on a connective
 
 
-def fit_title(title):
+def title_room(section):
+    """Largest estimated title width that still clears the section label and stays inside the slot."""
+    label = components.text_width(section, 14.67, "OPPOSans M") * TITLE_RENDER_RATIO if section else 0
+    room = (1244.07 - label - TITLE_GAP - TITLE_SLOT_X) / TITLE_RENDER_RATIO
+    return min(TITLE_SLOT_W, room)
+
+
+def fit_title(title, section=""):
     """(title, size, removed): one line only; step the size down, then cut the tail (user rule 2026-10-23)."""
+    room = title_room(section)
     for size in TITLE_SIZES:
-        if components.text_width(title, size, "OPPOSans H") <= TITLE_MAX:
+        if components.text_width(title, size, "OPPOSans H") <= room:
             return title, size, ""
     cut = title
-    while cut and components.text_width(cut, TITLE_SIZES[-1], "OPPOSans H") > TITLE_MAX:
+    while cut and components.text_width(cut, TITLE_SIZES[-1], "OPPOSans H") > room:
         cut = cut[:-1]
     # end on a clause boundary when one is close to the cut, so the kept part reads as a phrase
     stop = max(cut.rfind(p) for p in TITLE_PUNCT)
     if stop >= len(cut) * 0.6:
         cut = cut[:stop]
-    cut = cut.rstrip(TITLE_PUNCT + " ")
+    cut = cut.rstrip(TITLE_PUNCT + " ").rstrip(TITLE_DANGLING + " ")
     return cut, TITLE_SIZES[-1], title[len(cut):]
 
 
@@ -299,10 +313,11 @@ def cmd_scaffold(a):
     footer = SAMPLE_DATA_FOOTER if a.sample_data else (a.footer if a.footer is not None else header.get("说明", ""))
     if a.source_note:
         footer += a.source_note
-    title, title_size, removed = fit_title(a.title)
+    section = a.section if a.section is not None else header.get("页眉标签", "")
+    title, title_size, removed = fit_title(a.title, section)
     values = {
         "{{PAGE_TITLE}}": title,
-        "{{SECTION_NAME}}": a.section if a.section is not None else header.get("页眉标签", ""),
+        "{{SECTION_NAME}}": section,
         "{{KEY_MESSAGE}}": a.thesis or "",
         "{{SOURCE}}": footer,
         "{{AUTHOR}}": a.author if a.author is not None else header.get("机构", ""),
@@ -388,7 +403,8 @@ def cmd_put(a):
     head, tail = svg.split(BODY_ANCHOR, 1)
     page.write_text(f"{head}{BODY_ANCHOR}{tail.split(chr(10), 1)[0]}\n{body.rstrip()}\n</svg>\n", encoding="utf-8")
     print(f"PUT={page}  ({n} preset(s), {nc} component marker(s), {nb} auto bound(s) from {src.name})")
-    for finding in components.lint_body(source, body, 'data-pptx-layout="content_thesis"' in svg):
+    thesis = 'data-pptx-layout="content_thesis"' in svg
+    for finding in components.lint_body(source, body, thesis) + components.layout_lint(body, thesis):
         print(f"LINT {stem}: {finding}")
     if not a.no_preview:
         a.pages = [stem]

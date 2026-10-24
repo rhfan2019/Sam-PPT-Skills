@@ -74,3 +74,4 @@
 - filter 只挂单个图元；不用 style / class / mask；tspan 不写 font-family；续行 tspan 重复 x。
 - 预设一律 `<!--P …-->`，翻转 / 旋转写外层 g；漏斗 trapezoid 旋转 180。
 - 构件标记 `<!--C pill|head|num …-->`、`<!--T …-->` 只用于小构件，主视觉必须手写（SKILL.md 第 5 步）。
+- `put` 打印的 `LINT … [WARN]`（大块 > 4、数字焦点过多、小字过多、线穿字、卡片空底、占位块、装饰补位）交付前逐条处理，不改的在交付说明里写明理由。

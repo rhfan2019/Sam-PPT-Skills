@@ -16,7 +16,7 @@
     stroke="#999999" stroke-width="1.33"
     data-pptx-layer="layout" data-pptx-editable="false"/>
 
-  <g id="title-slot" data-pptx-placeholder="title" data-pptx-bounds="80.7 26 880 56">
+  <g id="title-slot" data-pptx-placeholder="title" data-pptx-bounds="80.7 26 990 56">
     <text id="title-carrier" data-pptx-carrier="true" x="80.7" y="67.63"
       fill="#1C4274" font-family="OPPOSans H, Microsoft YaHei, sans-serif"
       font-size="37.33">{{PAGE_TITLE}}</text>
