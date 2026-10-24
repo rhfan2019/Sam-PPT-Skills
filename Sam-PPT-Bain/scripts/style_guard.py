@@ -40,7 +40,10 @@ CLAUSES = [
 
 
 def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    data = path.read_bytes()
+    if path.suffix != ".png":                     # git may rewrite text files with CRLF on checkout
+        data = data.replace(b"\r\n", b"\n")
+    return hashlib.sha256(data).hexdigest()
 
 
 def locked_files():
