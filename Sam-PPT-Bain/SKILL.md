@@ -21,7 +21,7 @@ description: 把用户给的 PPT 大纲按贝恩 / 咨询白皮书风格（海�
 2. `references/quick-card.md` —— page-patterns 的压缩速查（坐标、字号、构件尺寸、关系 → 构造一行表、版面纪律）。**替代通读 `references/page-patterns.md`**：本次第一次用到某个构造、或速查卡写得不够时，按卡上的 §号去读 page-patterns 原文那一节。
 3. `references/ppt-master-digest.md` —— ppt-master 执行规则速查（分组与 bounds、箭头颜色、预设形状、结构化 slot、图表核验），替代通读插件执行核心；`new` 提示插件版本不符时改读原文档。
 4. 看 `references/approved/template-*.png`（用户确认的封面、目录、章节、结束页原型），再读 `references/approved/samples.md`，并看其中和本次大纲页型相关的正文页样张 `sample-*.png`（用户 2026-10-23 选定的风格样张，学质感和层次，不照抄构图）。
-5. `references/components/kit.md` —— 构件库（页签面板、图标指标块、人字箭头 + 阶段卡、立体标签、光晕底板、竖排侧标签条），并看 `references/components/kit-a.png`、`kit-b.png`。**每页至少用其中 2 种**，写法直接复制、只改坐标尺寸和文字。
+5. `references/components/kit.md` —— 核心构件库 K01–K19（栏头面板、指标块、证据框、人字箭头、时间轴、准星节点、括号、压线框、光柱……），并看 `references/components/kit-a.png` 到 `kit-e.png` 五张效果图。**每页至少用其中 2 种**，按文末“按内容选构件”表挑，写法直接复制、只改坐标尺寸和文字。备用库 `references/components/archive/index.md` 不必读，核心库没有对得上的写法时再查。
 
 **独立性**：本 Skill 不带任何案例的内容、数据或成品页。生成时只依据本次大纲、本 Skill 目录里的文件和 ppt-master 插件文档；不读取其他任何文件、目录、历史运行结果或 git 历史。
 

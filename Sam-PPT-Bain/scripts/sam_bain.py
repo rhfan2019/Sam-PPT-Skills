@@ -85,6 +85,12 @@ PAGE_DEFS = """  <defs>
     <linearGradient id="gFadeNavyUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#C4D7F1"/><stop offset="1" stop-color="#C4D7F1" stop-opacity="0"/></linearGradient>
     <linearGradient id="gBoardRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FBEFED"/></linearGradient>
     <linearGradient id="gBoardNavy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EEF3FA"/></linearGradient>
+    <filter id="nodeShadow" x="-30%" y="-30%" width="170%" height="170%"><feDropShadow dx="2.83" dy="2.83" stdDeviation="2.67" flood-color="#000000" flood-opacity="0.40"/></filter>
+    <filter id="glowRed" x="-80%" y="-80%" width="260%" height="260%"><feDropShadow dx="2.83" dy="2.83" stdDeviation="13.3" flood-color="#A23424" flood-opacity="0.29"/></filter>
+    <filter id="glowNavy" x="-80%" y="-80%" width="260%" height="260%"><feDropShadow dx="2.83" dy="2.83" stdDeviation="13.3" flood-color="#1C4274" flood-opacity="0.29"/></filter>
+    <linearGradient id="gColumnTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0.14" stop-color="#C4D7F1" stop-opacity="0"/><stop offset="0.67" stop-color="#C4D7F1" stop-opacity="0.15"/><stop offset="1" stop-color="#C4D7F1" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gColumnBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C4D7F1" stop-opacity="0"/><stop offset="0.85" stop-color="#C4D7F1" stop-opacity="0.30"/></linearGradient>
+    <linearGradient id="gBeamUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#C4D7F1" stop-opacity="0.08"/><stop offset="1" stop-color="#C4D7F1"/></linearGradient>
   </defs>
 """
 

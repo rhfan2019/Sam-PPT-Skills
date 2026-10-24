@@ -1,0 +1,25 @@
+<!-- A11：备用库构件，按参考材料自动转换，未经 PowerPoint 导出验证；用前先 put + preview 看效果 -->
+<defs>
+  <linearGradient id="g1" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0.05" stop-color="#C4D7F1" stop-opacity="0"/><stop offset="1" stop-color="#C4D7F1"/></linearGradient>
+  <filter id="f2" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="2.83" dy="2.83" stdDeviation="2.67" flood-color="#000000" flood-opacity="0.4"/></filter>
+</defs>
+<g id="a11" data-pptx-bounds="auto">
+<path d="M 605.86 239.04 C 470.87 239.04 361.45 270.36 361.45 309 C 361.45 347.64 470.87 378.96 605.86 378.96 C 740.84 378.96 850.27 347.64 850.27 309 C 850.27 270.36 740.84 239.04 605.86 239.04 Z M 604.56 220.76 C 797.85 220.76 954.55 264.41 954.55 318.25 C 954.55 372.08 797.85 415.73 604.56 415.73 C 411.26 415.73 254.56 372.08 254.56 318.25 C 254.56 264.41 411.26 220.76 604.56 220.76 Z" fill="url(#g1)" stroke="none"/>
+<!--P arc a11_22 254.56 220.69 699.99 195.6 none stroke=#1C4274 sw=2.67 adj1=val 12352981 adj2=val 19054218 -->
+<ellipse cx="453.26" cy="225.97" rx="28.99" ry="28.99" fill="#1C4274" stroke="none" filter="url(#f2)"/>
+<ellipse cx="755.86" cy="225.97" rx="28.99" ry="28.99" fill="#1C4274" stroke="none" filter="url(#f2)"/>
+<rect x="857.34" y="401.99" width="94.78" height="32.31" fill="none" stroke="none"/><text x="904.73" y="425.83" text-anchor="middle" font-family="OPPOSans M, Microsoft YaHei, sans-serif" font-size="18.67" fill="#1C4274">示例文字</text>
+<rect x="257.1" y="401.99" width="94.78" height="32.31" fill="none" stroke="none"/><text x="304.49" y="425.83" text-anchor="middle" font-family="OPPOSans M, Microsoft YaHei, sans-serif" font-size="18.67" fill="#1C4274">示例文字</text>
+<!--P arc a11_30 254.56 220.69 699.99 195.6 none stroke=#1C4274 sw=2.67 adj1=val 5758892 adj2=val 9891457 -->
+<!--P arc a11_31 254.56 220.69 699.99 195.6 none stroke=#1C4274 sw=2.67 adj1=val 20062886 adj2=val 198608 -->
+<!--P arc a11_32 254.56 220.69 699.99 195.6 none stroke=#1C4274 sw=2.67 adj1=val 509738 adj2=val 3693887 -->
+<!--P arc a11_33 254.56 220.69 699.99 195.6 none stroke=#1C4274 sw=2.67 adj1=val 10334739 adj2=val 12099692 -->
+<ellipse cx="604.56" cy="417.71" rx="28.99" ry="28.99" fill="#1C4274" stroke="none" filter="url(#f2)"/>
+<ellipse cx="304.38" cy="367.99" rx="28.99" ry="28.99" fill="#1C4274" stroke="none" filter="url(#f2)"/>
+<ellipse cx="904.74" cy="367.99" rx="28.99" ry="28.99" fill="#1C4274" stroke="none" filter="url(#f2)"/>
+<g transform="rotate(177.48 654.23 417.11)"><!--P rtTriangle a11_37 648.24 414.35 11.97 5.51 #1C4274 --></g>
+<rect x="425.13" y="254.55" width="345.29" height="48.47" fill="none" stroke="none"/><text x="597.77" y="291.99" text-anchor="middle" font-family="OPPOSans H, Microsoft YaHei, sans-serif" font-size="32" fill="#1C4274">示例文字占位内容</text>
+<rect x="707.55" y="385.39" width="112.76" height="16.6" fill="none" stroke="none"/><text x="763.93" y="397.63" text-anchor="middle" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="12" fill="#000000">示例</text>
+<rect x="382.17" y="385.39" width="112.76" height="16.6" fill="none" stroke="none"/><text x="438.55" y="397.63" text-anchor="middle" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="12" fill="#000000">示例</text>
+<rect x="548.18" y="222.46" width="112.76" height="16.6" fill="none" stroke="none"/><text x="604.56" y="234.7" text-anchor="middle" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="12" fill="#000000">示例</text>
+</g>

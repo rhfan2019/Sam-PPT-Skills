@@ -1,0 +1,19 @@
+<!-- A01：备用库构件，按参考材料自动转换，未经 PowerPoint 导出验证；用前先 put + preview 看效果 -->
+<g id="a01" data-pptx-bounds="auto">
+<rect x="38.93" y="542.59" width="1204.64" height="117.37" fill="#C4D7F1" fill-opacity="0.22" stroke="#040A11" stroke-width="1.33" stroke-dasharray="5.32,3.99"/>
+<rect x="50.18" y="558.11" width="141.01" height="86.59" fill="#1C4274" stroke="none"/><text x="120.69" y="610.37" text-anchor="middle" font-family="OPPOSans M, Microsoft YaHei, sans-serif" font-size="21.33" fill="#FFFFFF">示例文字</text>
+<rect x="206.95" y="555.82" width="247.87" height="97.01" fill="none" stroke="none"/><text x="211.86" y="577.05" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">• 示例文字
+占位/示例文字占位</text><text x="211.86" y="596.25" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">内
+容示例文/示例文字
+...</text>
+<rect x="482.38" y="560.41" width="141.01" height="86.59" fill="#A23424" stroke="none"/><text x="552.88" y="612.66" text-anchor="middle" font-family="OPPOSans M, Microsoft YaHei, sans-serif" font-size="21.33" fill="#FFFFFF">示例文字</text>
+<rect x="639.15" y="558.11" width="155.24" height="97.01" fill="none" stroke="none"/><text x="644.06" y="579.34" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">• 示例文字/示例
+</text><text x="644.06" y="598.54" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">文字占位内容
+示例</text><text x="644.06" y="617.74" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">文字/示例
+...</text>
+<rect x="891.13" y="559.53" width="141.01" height="86.59" fill="#1C4274" stroke="none"/><text x="961.63" y="611.78" text-anchor="middle" font-family="OPPOSans M, Microsoft YaHei, sans-serif" font-size="21.33" fill="#FFFFFF">示例文字占位</text>
+<rect x="1047.9" y="557.24" width="193.16" height="97.01" fill="none" stroke="none"/><text x="1052.81" y="578.47" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">• 8X
+示例文字占位/示例</text><text x="1052.81" y="597.67" text-anchor="start" font-family="OPPOSans R, Microsoft YaHei, sans-serif" font-size="16" fill="#000000">文
+字占位内
+...</text>
+</g>

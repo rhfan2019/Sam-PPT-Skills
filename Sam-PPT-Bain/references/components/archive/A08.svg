@@ -1,0 +1,8 @@
+<!-- A08：备用库构件，按参考材料自动转换，未经 PowerPoint 导出验证；用前先 put + preview 看效果 -->
+<defs>
+  <marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="#1C4274"/></marker>
+</defs>
+<g id="a08" data-pptx-bounds="auto">
+<line x1="419.18" y1="116.61" x2="819.15" y2="116.61" stroke="#1C4274" stroke-width="0.67" marker-end="url(#m1)" marker-start="url(#m1)"/>
+<rect x="546.51" y="107.7" width="166.78" height="12.01" rx="2" fill="#FFFFFF" stroke="none"/><text x="629.9" y="119.86" text-anchor="middle" font-family="OPPOSans M, Microsoft YaHei, sans-serif" font-size="14.67" fill="#000000">示例文字占位内容示例文</text>
+</g>
