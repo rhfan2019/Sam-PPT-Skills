@@ -6,8 +6,10 @@ renders in YaHei. OPPOSans carries the CJK glyphs itself.
 
 Pairing rule, applied per run-property element (rPr / defRPr / endParaRPr) in
 slides, layouts, masters and charts: only when its latin face is OPPOSans* and its
-ea slot is YaHei or a theme reference, ea becomes the latin face. Runs with any
-other latin face, or an explicitly chosen ea face, are left alone. In the theme,
+ea slot is YaHei or a theme reference, ea becomes the latin face; when its latin
+face is a theme reference (+mn-lt / +mj-lt) and its ea is YaHei, ea becomes the
+matching theme reference (+mn-ea / +mj-ea). Runs with any other latin face, or an
+explicitly chosen ea face, are left alone. In the theme,
 each major/minor font's ea (and Hans/Hant script) face follows that block's latin
 face when the latter is OPPOSans*.
 
@@ -28,6 +30,8 @@ PARTS = ("ppt/slides/", "ppt/slideLayouts/", "ppt/slideMasters/", "ppt/charts/")
 RUN_PROPS = re.compile(r"<a:(?:rPr|defRPr|endParaRPr)\b[^>]*?(?:/>|>.*?</a:(?:rPr|defRPr|endParaRPr)>)", re.S)
 LATIN = re.compile(r'<a:latin typeface="(OPPOSans[^"]*)"')
 EA = re.compile(r'(<a:ea typeface=")(?:' + re.escape(FALLBACK) + r'|\+mn-ea|\+mj-ea)"')
+THEME_LATIN = re.compile(r'<a:latin typeface="\+(mn|mj)-lt"')
+YAHEI_EA = re.compile(r'(<a:ea typeface=")' + re.escape(FALLBACK) + '"')
 
 
 def fix_runs(xml):
@@ -38,7 +42,13 @@ def fix_runs(xml):
         props = m.group(0)
         latin = LATIN.search(props)
         if not latin:
-            return props
+            # latin follows the theme (+mn-lt / +mj-lt): a hard-coded YaHei ea follows it too
+            theme = THEME_LATIN.search(props)
+            if not theme:
+                return props
+            new, k = YAHEI_EA.subn(lambda e: e.group(1) + f"+{theme.group(1)}-ea" + '"', props)
+            n += k
+            return new
         new, k = EA.subn(lambda e: e.group(1) + latin.group(1) + '"', props)
         n += k
         return new
