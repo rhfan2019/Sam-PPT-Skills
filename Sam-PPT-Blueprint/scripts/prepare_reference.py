@@ -1,0 +1,96 @@
+"""Prepare a reference deck once, so runs start from it directly (step 1).
+
+  python prepare_reference.py <reference.pptx> <library_dir>
+
+Writes into <library_dir>:
+  import/       ppt-master import workspace (--inheritance-mode both); pages to start from are
+                import/authoring-svg-flat/slide_NN.svg
+  renders/      PowerPoint renders slide-NN.png at 1600 px
+  contact/      numbered contact sheets, 12 pages each, for choosing blueprints
+  start-check.txt  every page started with start_page.py and run through ppt-master's final
+                checker: which pages pass as-is and what the others still need
+The layout catalog (catalog.md) is written by hand next to these and approved by the user.
+"""
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from pm import ppt_master_dir  # noqa: E402
+from start_page import strip  # noqa: E402
+
+
+def run(args, **kw):
+    print("$", " ".join(str(a) for a in args), flush=True)
+    return subprocess.run([str(a) for a in args], **kw)
+
+
+def contact_sheets(renders: Path, out: Path):
+    from PIL import Image, ImageDraw, ImageFont
+    out.mkdir(parents=True, exist_ok=True)
+    pngs = sorted(renders.glob("slide-*.png"))
+    try:
+        font = ImageFont.truetype("C:/Windows/Fonts/msyhbd.ttc", 28)
+    except OSError:
+        font = ImageFont.load_default()
+    w, h = 533, 300
+    for s in range(0, len(pngs), 12):
+        sheet = Image.new("RGB", (w * 3, h * 4), "white")
+        d = ImageDraw.Draw(sheet)
+        for k, p in enumerate(pngs[s:s + 12]):
+            x, y = (k % 3) * w, (k // 3) * h
+            sheet.paste(Image.open(p).resize((w - 6, h - 6)), (x + 3, y + 3))
+            num = re.findall(r"\d+", p.stem)[0]
+            d.rectangle([x + 3, y + 3, x + 70, y + 40], fill="#FFD400")
+            d.text((x + 8, y + 5), num, fill="black", font=font)
+        sheet.save(out / f"sheet{s // 12 + 1}.png")
+
+
+def start_check(pages: Path, out: Path, pm: Path):
+    with tempfile.TemporaryDirectory(dir=out.parent) as tmp:
+        run([sys.executable, pm / "scripts/project_manager.py", "init", "chk", "--format", "ppt169",
+             "--dir", tmp, "--quick-generate"], capture_output=True)
+        project = next(Path(tmp).glob("chk_*"))
+        for svg in sorted(pages.glob("slide_*.svg")):
+            text, _ = strip(svg.read_text(encoding="utf-8"))
+            (project / "svg_output" / svg.name).write_text(text, encoding="utf-8")
+        res = run([sys.executable, pm / "scripts/svg_quality_checker.py", project, "--quick-generate",
+                   "--canonical-authoring", "--stage", "final"], capture_output=True, text=True, encoding="utf-8")
+    report, page, errors = res.stdout, None, {}
+    for line in report.splitlines():
+        m = re.search(r"(slide_\d+)\.svg - ", line)
+        if m:
+            page = m.group(1)
+            continue
+        if "[ERROR]" in line and page and "With errors" not in line:
+            kind = "参考稿原文超出页面（换成大纲文字后消失）" if "exceeds the root viewBox" in line else line.strip()[8:90]
+            errors.setdefault(page, set()).add(kind)
+    total = len(list(pages.glob("slide_*.svg")))
+    lines = [f"{total} 页起页后跑 ppt-master 最终检查：{total - len(errors)} 页直接通过。", ""]
+    for p in sorted(errors):
+        lines.append(f"{p}: " + "；".join(sorted(errors[p])))
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n".join(lines[:1]))
+
+
+def main():
+    ref, lib = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
+    pm = ppt_master_dir()
+    lib.mkdir(parents=True, exist_ok=True)
+    imp = lib / "import"
+    if imp.exists():
+        shutil.rmtree(imp)
+    run([sys.executable, pm / "scripts/pptx_template_import.py", ref, "-o", imp, "--inheritance-mode", "both"],
+        check=True, capture_output=True)
+    run(["powershell", "-ExecutionPolicy", "Bypass", "-File", HERE / "render.ps1", ref, lib / "renders"], check=True)
+    contact_sheets(lib / "renders", lib / "contact")
+    start_check(imp / "authoring-svg-flat", lib / "start-check.txt", pm)
+    print(f"reference library ready: {lib}")
+
+
+if __name__ == "__main__":
+    main()

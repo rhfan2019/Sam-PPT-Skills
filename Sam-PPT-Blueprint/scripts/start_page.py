@@ -31,13 +31,44 @@ def strip(svg: str) -> tuple[str, dict]:
         r'<use\b[^>]*data-icon="imported/[^"]*"[^>]*?(?:/>|>.*?</use>)', "", body, flags=re.S)
     body, stats["stroke_gradients_to_solid"] = solid_stroke_gradients(body)
     body, stats["group_filters_moved"] = move_group_filters(body)
+    head, k1 = fix_fonts(head)
+    body, k2 = fix_fonts(body)
+    stats["fonts_to_opposans"] = k1 + k2
     return head + body, stats
+
+
+THEME_FACE = {"+mj-lt": "OPPOSans H", "+mn-lt": "OPPOSans R"}
+
+
+def fix_fonts(text):
+    """Reference faces other than OPPOSans (Arial, 思源黑体, 阿里巴巴普惠体, theme refs) become OPPOSans."""
+    n = 0
+
+    def tag(m):
+        nonlocal n
+        t = m.group(0)
+        fam = re.search(r'font-family="([^"]*)"', t)
+        if not fam:
+            return t
+        first = fam.group(1).replace("&quot;", "").split(",")[0].strip()
+        if first.startswith("OPPOSans"):
+            return t
+        if first in THEME_FACE:
+            face = THEME_FACE[first]
+        elif re.search(r"Bold|Heavy|Black|\bB$|\bH$", first) or 'font-weight="bold"' in t:
+            face = "OPPOSans B"
+        else:
+            face = "OPPOSans R"
+        n += 1
+        return t.replace(fam.group(0), f'font-family="&quot;{face}&quot;, sans-serif"')
+
+    return re.sub(r"<[^>]*\bfont-family=\"[^\"]*\"[^>]*>", tag, text), n
 
 
 def solid_stroke_gradients(body):
     """Imported stroke gradients use userSpaceOnUse, which the checker rejects: use the first stop colour."""
     first = {}
-    for m in re.finditer(r'<linearGradient\b[^>]*id="(mstrokegrad[^"]*)"[^>]*>(.*?)</linearGradient>', body, re.S):
+    for m in re.finditer(r'<(?:linear|radial)Gradient\b[^>]*id="(mstrokegrad[^"]*)"[^>]*>(.*?)</(?:linear|radial)Gradient>', body, re.S):
         stop = re.search(r'stop-color="([^"]+)"', m.group(2))
         if stop:
             first[m.group(1)] = stop.group(1)
@@ -45,7 +76,7 @@ def solid_stroke_gradients(body):
     for gid, colour in first.items():
         body, k = re.subn(r'stroke="url\(#' + re.escape(gid) + r'\)"', f'stroke="{colour}"', body)
         n += k
-        body = re.sub(r'<linearGradient\b[^>]*id="' + re.escape(gid) + r'"[^>]*>.*?</linearGradient>', "", body, flags=re.S)
+        body = re.sub(r'<(linear|radial)Gradient\b[^>]*id="' + re.escape(gid) + r'"[^>]*>.*?</\1Gradient>', "", body, flags=re.S)
     return body, n
 
 
