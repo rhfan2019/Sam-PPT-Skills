@@ -58,11 +58,13 @@ def ref_anchors(path):
 def composed_ref(text, ref_dir):
     shell = re.search(r"shell: (slide_\d+\.svg)", text).group(1)
     pts = [p for p in ref_anchors(ref_dir / shell) if p[1] < CHROME_TOP or p[1] > CHROME_BOTTOM]
-    for m in re.finditer(rf"module \d+: (slide_\d+\.svg) ({NUM}),({NUM}),({NUM}),({NUM}) -> ({NUM}),({NUM}),({NUM})", text):
-        x, y, w, h, X, Y, W = (float(v) for v in m.groups()[1:])
+    for m in re.finditer(rf"module \d+: (slide_\d+\.svg) ({NUM}),({NUM}),({NUM}),({NUM}) -> ({NUM}),({NUM}),({NUM})"
+                         rf"(?: \+({NUM}),({NUM}),({NUM}),({NUM}))?", text):
+        x, y, w, h, X, Y, W = (float(v) for v in m.groups()[1:8])
+        boxes = [(x, y, w, h)] + ([tuple(float(v) for v in m.groups()[8:])] if m.group(9) else [])
         s = W / w
         pts += [(px * s + X - x * s, py * s + Y - y * s) for px, py in ref_anchors(ref_dir / m.group(1))
-                if x - 6 <= px <= x + w + 6 and y - 6 <= py <= y + h + 6]
+                if any(bx - 6 <= px <= bx + bw + 6 and by - 6 <= py <= by + bh + 6 for bx, by, bw, bh in boxes)]
     return pts, "composed"
 
 

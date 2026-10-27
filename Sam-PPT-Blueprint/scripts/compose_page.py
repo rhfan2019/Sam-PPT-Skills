@@ -4,8 +4,10 @@
 
 shell=NN            keep page NN's background, header and footer (top-level elements centred above
                     y=CHROME_TOP or below y=CHROME_BOTTOM); everything else on it is dropped
-NN:x,y,w,h@X,Y[,W]  take from page NN every top-level element lying wholly inside the box x,y,w,h
-                    (6 px tolerance; a panel that runs past the box stays behind) and place the box's top-left corner at X,Y; with W the module is scaled
+NN:x,y,w,h[+x,y,w,h]@X,Y[,W]
+                    take from page NN every top-level element centred in the box x,y,w,h with at least
+                    60% of its area inside (a backplate shared with neighbouring modules stays behind;
+                    a second box after "+" adds an L-shaped part) and place the box's top-left corner at X,Y; with W the module is scaled
                     uniformly to width W (coordinates, sizes, font sizes, strokes are rewritten, no
                     transform is added)
 
@@ -53,13 +55,19 @@ def parse(path):
 
 # ---------- where an element sits ----------
 
-def inside(e, x, y, w, h, tol=6):
-    """Whole frame inside the box (with a little tolerance); frameless elements go by their anchor."""
-    f = nums(e.get("data-pptx-frame"))
-    if len(f) == 4:
-        return f[0] >= x - tol and f[1] >= y - tol and f[0] + f[2] <= x + w + tol and f[1] + f[3] <= y + h + tol
+def inside(e, x, y, w, h, share=0.6):
+    """Centre inside the box and at least `share` of the frame's area inside it: a module keeps its own
+    panels even when the box is a few px off, and leaves behind backplates shared with neighbours."""
     c = centre(e)
-    return bool(c) and x <= c[0] <= x + w and y <= c[1] <= y + h
+    if not c or not (x <= c[0] <= x + w and y <= c[1] <= y + h):
+        return False
+    f = nums(e.get("data-pptx-frame"))
+    if len(f) != 4:
+        return True
+    fw, fh = max(f[2], 1), max(f[3], 1)
+    ox = max(0, min(f[0] + fw, x + w) - max(f[0], x))
+    oy = max(0, min(f[1] + fh, y + h) - max(f[1], y))
+    return ox * oy >= share * fw * fh
 
 
 def centre(e):
@@ -208,11 +216,12 @@ def user_space(d):
 # ---------- main ----------
 
 def parse_module(tok):
-    m = re.fullmatch(rf"(\d+):({NUM}),({NUM}),({NUM}),({NUM})@({NUM}),({NUM})(?:,({NUM}))?", tok)
+    m = re.fullmatch(rf"(\d+):({NUM}),({NUM}),({NUM}),({NUM})(?:\+({NUM}),({NUM}),({NUM}),({NUM}))?@({NUM}),({NUM})(?:,({NUM}))?", tok)
     if not m:
-        sys.exit(f"bad module spec {tok!r}; expected NN:x,y,w,h@X,Y[,W]")
+        sys.exit(f"bad module spec {tok!r}; expected NN:x,y,w,h[+x,y,w,h]@X,Y[,W]")
     g = m.groups()
-    return int(g[0]), [float(v) for v in g[1:5]], float(g[5]), float(g[6]), float(g[7]) if g[7] else None
+    extra = [float(v) for v in g[5:9]] if g[5] else None
+    return int(g[0]), [float(v) for v in g[1:5]], extra, float(g[9]), float(g[10]), float(g[11]) if g[11] else None
 
 
 def main():
@@ -237,7 +246,7 @@ def main():
     notes = [f"shell: slide_{shell_no:02d}.svg"]
 
     for k, tok in enumerate([t for t in specs if not t.startswith("shell=")], 1):
-        n, (x, y, w, h), X, Y, W = parse_module(tok)
+        n, (x, y, w, h), extra, X, Y, W = parse_module(tok)
         src = parse(page(n))
         s = W / w if W else 1.0
         tx, ty = X - x * s, Y - y * s
@@ -245,7 +254,7 @@ def main():
         for e in src:
             if not isinstance(e.tag, str) or local(e) in ("defs", "metadata", "title", "desc") or is_background(e):
                 continue
-            if inside(e, x, y, w, h):
+            if inside(e, x, y, w, h) or (extra and inside(e, *extra)):
                 picked.append(copy.deepcopy(e))
         if not picked:
             sys.exit(f"module {k} ({tok}): no top-level element lies inside the box")
@@ -283,6 +292,8 @@ def main():
                             d.attrib.pop(f"data-pptx-{a}-{suffix}", None)
                         dangling += 1
         spec = f"slide_{n:02d}.svg {fmt(x)},{fmt(y)},{fmt(w)},{fmt(h)} -> {fmt(X)},{fmt(Y)},{fmt(w * s)}"
+        if extra:
+            spec += f" +{','.join(fmt(v) for v in extra)}"
         root.append(etree.Comment(f" module {k}: {spec} "))
         for e in picked:
             root.append(e)

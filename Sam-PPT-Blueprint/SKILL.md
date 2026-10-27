@@ -22,6 +22,7 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 | `scripts/inline_icons.py` | 起页时把参考稿的小矢量图标（页头手形等）转成原生可编辑形状，`start_page` 和 `compose_page` 自动调用 |
 | `scripts/edit_page.py` | 按 id 改页：列模块、改字、删、平移、复制、换色、清扫，可一次批量执行 |
 | `scripts/check_reuse.py` | 页面还剩多少形状来自参考稿（只作提示） |
+| `scripts/check_modules.py` | 核对模块目录：每个模块实际搬走多少元素、留下什么、关系编号是否合法 |
 | `scripts/export.py` | 代替直接调用 `svg_to_pptx.py`，修好中文字体（见"中文字体"） |
 | `scripts/render.ps1` | PowerPoint 渲染成 PNG |
 | `scripts/dump_blueprint.py` | 列出一页的全部形状和配色（需要细看时用） |
@@ -42,7 +43,7 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 
 ### 1. 读规范和参考稿库
 
-读 `references/logic-diagrams.md`、`references/page-zoning.md` 全文，`<参考稿库>/grid.txt`、`start-check.txt`，以及 `modules.json`（用一段 Python 只打印 `module page role diagram logic units chars start_ok` 这几列作总览，选中候选后再看它们的完整条目）。只在需要时看 `started-renders/slide-NN.png`（1600 px，不要缩小）。
+读 `references/logic-diagrams.md`、`references/page-zoning.md` 全文，`<参考稿库>/grid.txt`、`start-check.txt`，以及 `modules.json`（用一段 Python 只打印 `module page role diagram logic units chars start_level` 这几列作总览，选中候选后再看它们的完整条目）。只在需要时看 `started-renders/slide-NN.png`（1600 px，不要缩小）。
 
 ### 2. 规划全稿（主代理一次做完，写进 `plan.md`）
 
@@ -70,7 +71,7 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 python scripts/compose_page.py <项目>/svg_output/NN_页名.svg <参考稿库>/import/authoring-svg-flat shell=<外壳页> <页>:<x>,<y>,<w>,<h>@<X>,<Y>[,<W>] ...
 ```
 
-整页恰好合适时，也可以 `python scripts/start_page.py <参考稿库>/import/authoring-svg-flat/slide_NN.svg <项目>/svg_output/NN_页名.svg`。两者都会删掉图片和图片裁剪框、指向被删元素的连接线绑定、自定义几何的源信息、导入插画；把参考稿的小矢量图标转成原生形状；把组上的阴影移到形状上；把描边渐变改成首色；把参考稿字体统一成 OPPOSans；其余全部保留，并在页面里记下来源。
+拼完每页跑一次 `edit_page.py sweep`。模块紧贴页边时，参考稿原文可能伸出页面，单页检查会报"exceeds the root viewBox"；换成大纲文字后通常就消失了，拼页时也可以给模块留出 20–40 px 边距。整页恰好合适时，也可以 `python scripts/start_page.py <参考稿库>/import/authoring-svg-flat/slide_NN.svg <项目>/svg_output/NN_页名.svg`。两者都会删掉图片和图片裁剪框、指向被删元素的连接线绑定、自定义几何的源信息、导入插画；把参考稿的小矢量图标转成原生形状；把组上的阴影移到形状上；把描边渐变改成首色；把参考稿字体统一成 OPPOSans；其余全部保留，并在页面里记下来源。
 
 ### 4. 分段并行改页（fork）
 
