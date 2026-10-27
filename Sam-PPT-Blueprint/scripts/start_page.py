@@ -1,8 +1,10 @@
 """Start a page from its blueprint: copy the reference page's SVG into svg_output and
 strip only what cannot carry over, so the page is edited from the blueprint, not redrawn.
 
+Kept as native shapes: the reference's small vector icons (the header hand, icon badges), converted
+from <image href="*.svg"> to editable paths by inline_icons.py.
 Removed:
-- <image> elements and the nested <svg> picture-crop wrappers around them (reference
+- other <image> elements and the nested <svg> picture-crop wrappers around them (reference
   logos, photos, product shots; never reused);
 - connector bindings to other shapes (data-pptx-start/end-shape-*), which may point
   at removed pictures; the connector keeps its drawn geometry;
@@ -17,11 +19,15 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from inline_icons import inline_icons  # noqa: E402
 
-def strip(svg: str) -> tuple[str, dict]:
+
+def strip(svg: str, images_dir: Path | None = None) -> tuple[str, dict]:
     head_end = svg.index(">", svg.index("<svg")) + 1
     head, body = svg[:head_end], svg[head_end:]
     stats = {}
+    body, stats["icons_to_native"] = inline_icons(body, images_dir)
     body, stats["images"] = re.subn(r"<image\b[^>]*?(?:/>|>.*?</image>)", "", body, flags=re.S)
     body, stats["crop_wrappers"] = re.subn(r"<svg\b[^>]*?(?:/>|>.*?</svg>)", "", body, flags=re.S)
     body, stats["connector_bindings"] = re.subn(
@@ -97,7 +103,7 @@ def move_group_filters(body):
 
 def main():
     src, dst = Path(sys.argv[1]), Path(sys.argv[2])
-    out, stats = strip(src.read_text(encoding="utf-8"))
+    out, stats = strip(src.read_text(encoding="utf-8"), src.parent.parent / "images")
     dst.parent.mkdir(parents=True, exist_ok=True)
     root_end = out.index(">", out.index("<svg")) + 1
     out = out[:root_end] + f"\n<!-- blueprint: {src.name} -->" + out[root_end:]  # read by check_reuse.py

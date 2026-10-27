@@ -7,9 +7,13 @@ Writes into <library_dir>:
                 import/authoring-svg-flat/slide_NN.svg
   renders/      PowerPoint renders slide-NN.png at 1600 px
   contact/      numbered contact sheets, 12 pages each, for choosing blueprints
+  grid.txt      the content box between the header and footer rules and its 12-column grid (zones)
   start-check.txt  every page started with start_page.py and run through ppt-master's final
                 checker: which pages pass as-is and what the others still need
-The layout catalog (catalog.md) is written by hand next to these and approved by the user.
+  started-renders/ the passing started pages exported and rendered, slide-NN.png: what a page or module
+                really looks like once imported (judge modules by these, not by renders/)
+The module catalog (modules.json) is written next to these by reading both render sets, and approved
+by the user.
 """
 import re
 import shutil
@@ -56,11 +60,37 @@ def start_check(pages: Path, out: Path, pm: Path):
              "--dir", tmp, "--quick-generate"], capture_output=True)
         project = next(Path(tmp).glob("chk_*"))
         for svg in sorted(pages.glob("slide_*.svg")):
-            text, _ = strip(svg.read_text(encoding="utf-8"))
+            text, _ = strip(svg.read_text(encoding="utf-8"), pages.parent / "images")
             (project / "svg_output" / svg.name).write_text(text, encoding="utf-8")
         res = run([sys.executable, pm / "scripts/svg_quality_checker.py", project, "--quick-generate",
                    "--canonical-authoring", "--stage", "final"], capture_output=True, text=True, encoding="utf-8")
-    report, page, errors = res.stdout, None, {}
+        errors = write_start_check(res.stdout, pages, out)
+        started_renders(project, errors, out.parent / "started-renders", pm)
+
+
+def started_renders(project: Path, errors: dict, dst: Path, pm: Path):
+    """Export the pages that pass as started and render them: what each page really looks like after
+    import and start_page (some effects, such as 3D rotation, do not survive). Choose modules from these."""
+    for p in errors:
+        (project / "svg_output" / f"{p}.svg").unlink()
+    run([sys.executable, pm / "scripts/stamp_native_fallbacks.py", project / "svg_output", "--write"], capture_output=True)
+    run([sys.executable, pm / "scripts/svg_quality_checker.py", project, "--quick-generate", "--canonical-authoring",
+         "--stage", "final", "--json"], capture_output=True)
+    deck = project / "started.pptx"
+    run([sys.executable, HERE / "export.py", project, "--quick-generate", "--no-notes", "--native-charts-and-tables",
+         "-o", deck], check=True, capture_output=True)
+    tmp = project / "renders"
+    run(["powershell", "-ExecutionPolicy", "Bypass", "-File", HERE / "render.ps1", deck, tmp], check=True)
+    if dst.exists():
+        shutil.rmtree(dst)
+    dst.mkdir(parents=True)
+    for i, svg in enumerate(sorted((project / "svg_output").glob("slide_*.svg")), 1):
+        num = re.findall(r"\d+", svg.stem)[0]
+        shutil.copy(tmp / f"slide-{i:02d}.png", dst / f"slide-{num}.png")
+
+
+def write_start_check(report: str, pages: Path, out: Path) -> dict:
+    page, errors = None, {}
     for line in report.splitlines():
         m = re.search(r"(slide_\d+)\.svg - ", line)
         if m:
@@ -75,6 +105,34 @@ def start_check(pages: Path, out: Path, pm: Path):
         lines.append(f"{p}: " + "；".join(sorted(errors[p])))
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines[:1]))
+    return errors
+
+
+def measure_grid(pages: Path, out: Path):
+    """Content box between the reference's header rule and footer rule, split into 12 columns."""
+    import collections
+    top, bottom, left, right = collections.Counter(), collections.Counter(), collections.Counter(), collections.Counter()
+    for svg in pages.glob("slide_*.svg"):
+        for m in re.finditer(r'data-pptx-frame="([^"]+)"[^>]*data-pptx-prst="line"', svg.read_text(encoding="utf-8")):
+            x, y, w, h = (float(v) for v in m.group(1).split())
+            if w > 1000 and h < 2:
+                (top if y < 130 else bottom if y > 600 else collections.Counter())[round(y)] += 1
+                if y < 130:
+                    left[round(x)] += 1
+                    right[round(x + w)] += 1
+    if not top or not bottom:
+        out.write_text("no header/footer rule found: use 40,100,1240,670 as the content box\n", encoding="utf-8")
+        return
+    x0, x1 = left.most_common(1)[0][0], right.most_common(1)[0][0]
+    y0, y1 = top.most_common(1)[0][0] + 18, bottom.most_common(1)[0][0] - 15
+    gutter = 16
+    col = (x1 - x0 - 11 * gutter) / 12
+    lines = [f"content box: x {x0}-{x1}, y {y0}-{y1} (w {x1 - x0}, h {y1 - y0})",
+             f"12 columns: width {col:.0f}, gutter {gutter}; column i starts at x = {x0} + {col + gutter:.0f}*i;"
+             f" n columns span {col + gutter:.0f}*n - {gutter}",
+             "starts: " + " ".join(f"{x0 + (col + gutter) * i:.0f}" for i in range(12))]
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(lines[0])
 
 
 def main():
@@ -88,6 +146,7 @@ def main():
         check=True, capture_output=True)
     run(["powershell", "-ExecutionPolicy", "Bypass", "-File", HERE / "render.ps1", ref, lib / "renders"], check=True)
     contact_sheets(lib / "renders", lib / "contact")
+    measure_grid(imp / "authoring-svg-flat", lib / "grid.txt")
     start_check(imp / "authoring-svg-flat", lib / "start-check.txt", pm)
     print(f"reference library ready: {lib}")
 
