@@ -8,4 +8,4 @@
 - 开发记录在 `Sam-PPT-Lab\handover\`，不进仓库，**不要主动读取**；只有用户在会话里明确要求并给出路径时才读。
 - 只有用户说"可以了"的页面才算基线；不要自己宣布通过。
 - Skill 不删改大纲内容，信息密度归 Sam-PPT-Outline 管。测试大纲放在 `Sam-PPT-Lab\outlines\`。
-- 隔离测试：用 `Sam-PPT-Lab\tools\test-guard\seed.py` 建运行目录并在其中开会话，会话只能访问本运行目录。
+- 测试和真实使用完全一样：Skill 和参考稿库用 `install.py` 全局安装（测哪个提交就先装哪个），在一个只放着 `outline.md` 的独立文件夹里开新会话，只说一句"用 Sam-PPT-Blueprint 把 outline.md 做成 PPT。"。不让用户执行任何脚本或准备环境；测试会话里不写流程、计时、汇报等要求，这些都内置在 Skill 里。每次测试的共性问题记进 `Sam-PPT-Lab\findings.md`。
