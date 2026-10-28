@@ -12,6 +12,8 @@ Writes into <library_dir>:
                 checker: which pages pass as-is and what the others still need
   started-renders/ the passing started pages exported and rendered, slide-NN.png: what a page or module
                 really looks like once imported (judge modules by these, not by renders/)
+  style-baseline.json  the reference's main hues and the range of its colour balance, white space,
+                connectors and texture per content page (style_gap.py baseline; step 7 checks against it)
 The module catalog (modules.json) is written next to these by reading both render sets, and approved
 by the user.
 """
@@ -148,6 +150,7 @@ def main():
     contact_sheets(lib / "renders", lib / "contact")
     measure_grid(imp / "authoring-svg-flat", lib / "grid.txt")
     start_check(imp / "authoring-svg-flat", lib / "start-check.txt", pm)
+    run([sys.executable, HERE / "style_gap.py", "baseline", ref, lib], check=True)
     print(f"reference library ready: {lib}")
 
 

@@ -239,7 +239,9 @@ def main():
     tree = etree.parse(path, etree.XMLParser(remove_blank_text=False))
     root = tree.getroot()
     if op == "batch":
-        steps = [shlex.split(s, posix=True) for s in sys.argv[3].split(" ; ") if s.strip()]
+        # posix shlex would turn the "\n" line break into a plain "n"
+        steps = [[t.replace("\x00", "\\n") for t in shlex.split(s.replace("\\n", "\x00"), posix=True)]
+                 for s in sys.argv[3].split(" ; ") if s.strip()]
     else:
         steps = [[op] + sys.argv[3:]]
     changed = False
