@@ -96,6 +96,29 @@ def page_metrics(xml, png, box, hues):
 KEYS = ["secondary_ratio", "empty_pct", "connectors", "texture", "shapes"]
 
 
+def shadow_recipes(lib: Path, top=2):
+    """The reference's most used drop shadows, as SVG filters."""
+    from collections import Counter
+    from lxml import etree
+    recipes = Counter()
+    for f in sorted((lib / "import/authoring-svg-flat").glob("slide_*.svg")):
+        root = etree.parse(str(f)).getroot()
+        filters = {}
+        for flt in root.iter("{http://www.w3.org/2000/svg}filter"):
+            d = flt.find("{http://www.w3.org/2000/svg}feDropShadow")
+            if d is not None:
+                key = tuple(round(float(d.get(a, 0)), 1) for a in ("dx", "dy", "stdDeviation")) + (
+                    (d.get("flood-color") or "#000000").upper(), round(float(d.get("flood-opacity", 1)), 2))
+                filters[flt.get("id")] = key
+        for e in root.iter():
+            m = re.search(r"url\(#([^)]+)\)", e.get("filter") or "") if isinstance(e.tag, str) else None
+            if m and m.group(1) in filters:
+                recipes[filters[m.group(1)]] += 1
+    return ([{"count": n, "svg": f'<feDropShadow dx="{k[0]}" dy="{k[1]}" stdDeviation="{k[2]}" '
+                                 f'flood-color="{k[3]}" flood-opacity="{k[4]}"/>'}
+             for k, n in recipes.most_common(top)])
+
+
 def baseline(ref: Path, lib: Path):
     box = content_box(lib)
     xmls = slides_xml(ref)
@@ -105,10 +128,23 @@ def baseline(ref: Path, lib: Path):
     out = {"pages": pages, "hues": hues,
            "metrics": {k: {q: round(float(np.percentile([r[k] for r in rows], p)), 2) for q, p in (("p25", 25), ("median", 50), ("p75", 75))}
                        for k in KEYS + ["primary_pct", "secondary_pct"]}}
+    out["shadows"] = shadow_recipes(lib)
+    names = {"ellipse": "圆", "flowChartConnector": "圆", "rect": "矩形", "roundRect": "圆角矩形"}
+    carriers = {}
+    for i in pages:
+        for sp in re.findall(r"<p:sp>.*?</p:sp>", xmls[i - 1], re.S):
+            if "<a:outerShdw" in sp:
+                m = re.search(r'prst="(\w+)"', sp)
+                k = names.get(m.group(1), "其他") if m else "其他"
+                carriers[k] = carriers.get(k, 0) + 1
+    out["shadow_carriers"] = dict(sorted(carriers.items(), key=lambda kv: -kv[1]))
     (lib / "style-baseline.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{len(pages)} content pages; main hues {hues[0]:.0f}° / {hues[1]:.0f}°")
     for k, v in out["metrics"].items():
         print(f"  {k}: p25 {v['p25']}  median {v['median']}  p75 {v['p75']}")
+    for s in out["shadows"]:
+        print(f"  shadow x{s['count']}: {s['svg']}")
+    print(f"  shadow carriers: {out['shadow_carriers']}")
 
 
 def check(lib: Path, deck: Path, renders: Path):
@@ -133,6 +169,11 @@ def check(lib: Path, deck: Path, renders: Path):
     print(f"| 参考稿 p25–p75 | {ref['secondary_ratio']['p25']}–{ref['secondary_ratio']['p75']} "
           f"| {ref['empty_pct']['p25']}–{ref['empty_pct']['p75']} | {ref['connectors']['p25']}–{ref['connectors']['p75']} "
           f"| {ref['texture']['p25']}–{ref['texture']['p75']} | {ref['shapes']['p25']}–{ref['shapes']['p75']} | |")
+    if base.get("shadows"):
+        print("\n质感低的页，按参考稿的阴影配方给实心圆、实色标题块、结论条加阴影（page-zoning.md 第六节第 5 条）：")
+        for s in base["shadows"]:
+            print(f"  {s['svg']}  （参考稿用了 {s['count']} 次）")
+        print(f"  参考稿带阴影的元素：{base.get('shadow_carriers')}")
 
 
 def main():
