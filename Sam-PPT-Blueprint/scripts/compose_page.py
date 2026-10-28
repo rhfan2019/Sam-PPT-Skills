@@ -14,6 +14,8 @@ NN:x,y,w,h[+x,y,w,h]@X,Y[,W]
 Each source page goes through start_page.strip first (pictures, crop wrappers, bindings to removed
 shapes and so on). A module's ids get an "mK-" prefix and the defs it uses (gradients, filters,
 markers, clip paths) are copied with the same prefix, so modules from different pages never clash.
+A panel (rect / roundRect without text) that lies under a module but is shared with neighbouring
+modules or spans the page is not lost: a copy cut to the module's box goes in behind the module.
 A comment <!-- module K: slide_NN.svg x,y,w,h -> X,Y,W --> per module is read by check_reuse.py.
 """
 import copy
@@ -61,13 +63,27 @@ def inside(e, x, y, w, h, share=0.6):
     c = centre(e)
     if not c or not (x <= c[0] <= x + w and y <= c[1] <= y + h):
         return False
-    f = nums(e.get("data-pptx-frame"))
-    if len(f) != 4:
+    f = shown_frame(e)
+    if not f:
         return True
     fw, fh = max(f[2], 1), max(f[3], 1)
     ox = max(0, min(f[0] + fw, x + w) - max(f[0], x))
     oy = max(0, min(f[1] + fh, y + h) - max(f[1], y))
     return ox * oy >= share * fw * fh
+
+
+def shown_frame(e):
+    """The frame as the page shows it: a shape turned by a quarter turn swaps its width and height
+    about its centre (imported bars drawn upright and rotated 90 degrees are common)."""
+    f = nums(e.get("data-pptx-frame"))
+    if len(f) != 4:
+        return None
+    m = re.match(rf"\s*rotate\(\s*({NUM})", e.get("transform") or "")
+    a = float(m.group(1)) % 180 if m else 0
+    if 45 < a < 135:
+        cx, cy = f[0] + f[2] / 2, f[1] + f[3] / 2
+        return [cx - f[3] / 2, cy - f[2] / 2, f[3], f[2]]
+    return f
 
 
 def centre(e):
@@ -91,6 +107,60 @@ def is_background(e):
     f = nums(e.get("data-pptx-frame"))
     w = nums(e.get("width"))
     return (len(f) == 4 and f[2] >= 1270) or (w and w[0] >= 1270) or (not f and local(e) == "rect")
+
+
+# ---------- shared backplates ----------
+
+def plate_path(x, y, w, h, prst, adj):
+    if prst == "roundRect":
+        r = min(w, h) * min(adj, 50000) / 100000
+        if r > 0.5:
+            a = f"A {fmt(r)} {fmt(r)} 0 0 1"
+            return (f"M {fmt(x)} {fmt(y + r)} {a} {fmt(x + r)} {fmt(y)} L {fmt(x + w - r)} {fmt(y)} "
+                    f"{a} {fmt(x + w)} {fmt(y + r)} L {fmt(x + w)} {fmt(y + h - r)} {a} {fmt(x + w - r)} {fmt(y + h)} "
+                    f"L {fmt(x + r)} {fmt(y + h)} {a} {fmt(x)} {fmt(y + h - r)} Z")
+    return f"M {fmt(x)} {fmt(y)} L {fmt(x + w)} {fmt(y)} L {fmt(x + w)} {fmt(y + h)} L {fmt(x)} {fmt(y + h)} Z"
+
+
+def backplate(e, boxes, min_cover=0.3):
+    """A plain panel (rect / roundRect, no text, unrotated or turned by a right angle) that lies under the
+    module but belongs to several modules or the whole page: a copy cut to the module's boxes, so the
+    module keeps its ground."""
+    if e.get("data-pptx-prst") not in ("rect", "roundRect") or             any("".join(t.itertext()).strip() for t in e.iter(f"{{{SVG}}}text")):
+        return None
+    f = nums(e.get("data-pptx-frame"))
+    geo = [c for c in e if local(c) == "path" and c.get("data-pptx-part") == "geometry"]
+    if len(f) != 4 or len(geo) != 1 or f[2] < 2 or f[3] < 2:
+        return None
+    angle, t = 0.0, (e.get("transform") or "").strip()
+    if t:
+        m = re.fullmatch(rf"rotate\(\s*({NUM})[\s,]+({NUM})[\s,]+({NUM})\s*\)", t)
+        if not m:
+            return None
+        angle = float(m.group(1)) % 360
+        if min(abs(angle - a) for a in (0, 90, 180, 270, 360)) > 0.5:
+            return None
+    turned = 45 < angle < 135 or 225 < angle < 315
+    cx, cy = f[0] + f[2] / 2, f[1] + f[3] / 2
+    ew, eh = (f[3], f[2]) if turned else (f[2], f[3])  # what the page shows
+    ex, ey = cx - ew / 2, cy - eh / 2
+    x0, y0 = max(ex, min(b[0] for b in boxes)), max(ey, min(b[1] for b in boxes))
+    x1 = min(ex + ew, max(b[0] + b[2] for b in boxes))
+    y1 = min(ey + eh, max(b[1] + b[3] for b in boxes))
+    if x1 - x0 < 2 or y1 - y0 < 2 or (x1 - x0) * (y1 - y0) < min_cover * boxes[0][2] * boxes[0][3]:
+        return None
+    ncx, ncy, vw, vh = (x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0
+    lw, lh = (vh, vw) if turned else (vw, vh)  # back in the shape's own frame
+    lx, ly = ncx - lw / 2, ncy - lh / 2
+    adj = nums(e.get("data-pptx-av-adj"))
+    plate = copy.deepcopy(e)
+    plate.set("data-pptx-frame", " ".join(fmt(v) for v in (lx, ly, lw, lh)))
+    plate.attrib.pop("data-pptx-bounds", None)
+    if t:
+        plate.set("transform", f"rotate({fmt(angle)} {fmt(ncx)} {fmt(ncy)})")
+    g = [c for c in plate if local(c) == "path" and c.get("data-pptx-part") == "geometry"][0]
+    g.set("d", plate_path(lx, ly, lw, lh, e.get("data-pptx-prst"), adj[0] if adj else 16667))
+    return plate
 
 
 # ---------- affine rewrite p -> s*p + (tx, ty) ----------
@@ -215,6 +285,21 @@ def user_space(d):
 
 # ---------- main ----------
 
+def select(src, boxes):
+    """What a module takes from its page: its own elements, then copies of shared backplates under it."""
+    picked, plates = [], []
+    for e in src:
+        if not isinstance(e.tag, str) or local(e) in ("defs", "metadata", "title", "desc") or is_background(e):
+            continue
+        if any(inside(e, *b) for b in boxes):
+            picked.append(copy.deepcopy(e))
+        else:
+            p = backplate(e, boxes)
+            if p is not None:
+                plates.append(p)
+    return plates + picked, plates
+
+
 def parse_module(tok):
     m = re.fullmatch(rf"(\d+):({NUM}),({NUM}),({NUM}),({NUM})(?:\+({NUM}),({NUM}),({NUM}),({NUM}))?@({NUM}),({NUM})(?:,({NUM}))?", tok)
     if not m:
@@ -250,12 +335,7 @@ def main():
         src = parse(page(n))
         s = W / w if W else 1.0
         tx, ty = X - x * s, Y - y * s
-        picked = []
-        for e in src:
-            if not isinstance(e.tag, str) or local(e) in ("defs", "metadata", "title", "desc") or is_background(e):
-                continue
-            if inside(e, x, y, w, h) or (extra and inside(e, *extra)):
-                picked.append(copy.deepcopy(e))
+        picked, plates = select(src, [(x, y, w, h)] + ([tuple(extra)] if extra else []))
         if not picked:
             sys.exit(f"module {k} ({tok}): no top-level element lies inside the box")
         used = set()
@@ -298,7 +378,8 @@ def main():
         for e in picked:
             root.append(e)
         warn = f"; font sizes x{s:.2f}" if s < 0.85 else ""
-        notes.append(f"module {k}: {spec}: {len(picked)} element(s), {len(mdefs)} def(s){warn}"
+        notes.append(f"module {k}: {spec}: {len(picked)} element(s) incl. {len(plates)} shared backplate(s) cut to the box, "
+                     f"{len(mdefs)} def(s){warn}"
                      + (f", {dangling} binding(s) to shapes outside the box dropped" if dangling else ""))
 
     root.insert(0, etree.Comment(" composed: " + " | ".join(notes) + " "))

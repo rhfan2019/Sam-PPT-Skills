@@ -10,7 +10,7 @@
 
 你只负责段 <N>：**<页文件名列表>**。
 
-- 按 plan.md 里这几页的规划改页，全稿约定是硬约束。写法照 SKILL.md 第 4 步"每页的改法"：`edit_page.py list` → 一次 `edit_page.py batch …`（先删 plan.md 列出的要删改部件，最后一条是 `sweep`）→ 补图片位和图表 → 部件核对（`logic-diagrams.md` 第三、四节）→ 单页检查 `--stage page --page <页文件名>` → `check_reuse.py`（只作提示）。不要再读文档或脚本源码，直接动笔。
+- 按 plan.md 里这几页的规划改页，全稿约定是硬约束。写法照 SKILL.md 第 4 步"每页的改法"：`edit_page.py list` → 一次 `edit_page.py batch …`（先删 plan.md 列出的要删改部件，最后一条是 `sweep`）→ 补图片位和图表 → 部件核对（`logic-diagrams.md` 第三、四节；只动关系部件，装饰保留，删单元时不要连带删底板）→ 单页检查 `--stage page --page <页文件名>` → `check_reuse.py`（只作提示）。不要再读文档或脚本源码，直接动笔。
 - 不要新建空白 SVG；只碰你这几页的文件，不改 plan.md，不跑 `--stage final`、`stamp_native_fallbacks.py`、`export.py`、`render.ps1`。需要计划外的图标时换一个 plan.md 已列出的图标，或在汇报里说明。
 - 每页开始和结束用 `date "+%Y-%m-%d %H:%M:%S"` 记时间，写进汇报。
 - 写完后用中文只汇报这些：
