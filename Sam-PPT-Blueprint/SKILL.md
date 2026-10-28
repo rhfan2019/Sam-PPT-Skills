@@ -1,6 +1,6 @@
 ---
 name: Sam-PPT-Blueprint
-description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，学参考稿（如 rnb-core.pptx）的"神韵"而不是只换颜色。每页先按逻辑表达规范判断内容是什么关系（循环、流程、层级、对比、漏斗、构成、时间线、战略框架等）、该用什么图示，再按页面分区规范切分区，从参考稿拆好的模块目录里为每个分区挑模块（可来自不同参考页），拼成一页后原地换成大纲内容，保留模块的坐标、渐变、阴影、半透明和装饰，删掉含义不符的部件。主代理规划全稿，独立子代理审查图示含义，再用 fork 子代理分段并行改页。底层引擎是 ppt-master（Quick Generate，自由设计、扁平导出，不装模板、不走 mirror）。用户给出大纲和参考稿、要求"照这份模板的感觉做 PPT"、提到 Sam-PPT-Blueprint 或蓝图重绘时使用。不负责写大纲，不改大纲内容。
+description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，学参考稿（如 rnb-core.pptx）的"神韵"而不是只换颜色。每页先按逻辑表达规范判断内容是什么关系（循环、流程、层级、对比、漏斗、构成、时间线、战略框架等）、该用什么图示，再按页面分区规范切分区，从参考稿拆好的模块目录里为每个分区挑模块（可来自不同参考页），拼成一页后原地换成大纲内容，保留模块的坐标、渐变、阴影、半透明和装饰，删掉含义不符的部件。主代理规划全稿，独立子代理审查图示含义，再用 fork 子代理分段并行改页。底层引擎是 ppt-master（Quick Generate，自由设计、扁平导出，不装模板、不走 mirror）。用户给出大纲要求做 PPT 并提到 Sam-PPT-Blueprint 或蓝图重绘，或给出大纲和参考稿、要求"照这份模板的感觉做 PPT"时使用；用户没提参考稿时用已安装的默认参考稿库。不负责写大纲，不改大纲内容。
 ---
 
 # Sam-PPT-Blueprint
@@ -26,6 +26,8 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 | `scripts/pick_modules.py` | 按分区的关系编号、单元数、分区尺寸，从目录里按挑选顺序列出候选的完整条目和裁切图；`--batch` 一次做完整稿所有分区 |
 | `scripts/check_text.py` | 列出页面上不是来自大纲原文的文字（作者补的读法标签、参考稿残留） |
 | `scripts/group_page.py` | 收口时给页面补 ppt-master 要求的根结构：页面角色、页头页脚组、每个模块一个带 bounds 的根组 |
+| `scripts/find_library.py` | 找本次用的参考稿和参考稿库：默认用已安装的库，用户给了参考稿就找它的库 |
+| `scripts/install.py` | 一次性安装：Skill 装到 `~/.claude/skills/`，参考稿库装到 `~/.claude/sam-ppt/references/` |
 | `scripts/style_gap.py` | 参考稿的次色面积、留白、连接件、质感范围（预处理时生成 `style-baseline.json`），以及成品逐页和它的对比 |
 | `scripts/review_packet.py` | 把规划、大纲原文、用到的模块的关系部件按页拼成一个审查包，给含义审查员读 |
 | `scripts/export.py` | 代替直接调用 `svg_to_pptx.py`，修好中文字体（见"中文字体"） |
@@ -38,9 +40,16 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 - **参考稿库**：用 `prepare_reference.py` 预处理过的目录，包括 `import/`、`renders/`、`started-renders/`、`contact/`、`grid.txt`、`start-check.txt`、`style-baseline.json`，以及按 `module-catalog.md` 拆好、经用户审定的模块目录 `modules.json` 和它的一行索引 `modules-index.txt`（`check_modules.py --write` 生成）。
 - **运行目录**：用户没指定时，就是当前工作目录；项目、成品、渲染图和运行日志都放在这里，不写到运行目录以外。
 
-用户通常只说一句"用 Sam-PPT-Blueprint 把 X 做成 PPT，参考 Y"。下面这些不问用户，按默认来：
+用户通常只说一句"用 Sam-PPT-Blueprint 把 X 做成 PPT"，可能带上"参考 Y"。下面这些不问用户，按默认来：
 - 大纲：用户点名的文件；没点名时用运行目录里唯一的 `.md` 大纲。
-- 参考稿库：在参考稿所在目录找含 `modules.json` 的子目录；只有一个就用它，有多个就用名字和参考稿文件名前缀相同的那个。找不到时运行 `python scripts/prepare_reference.py <参考稿.pptx> <参考稿所在目录>/<参考稿名>-blueprint`（约 2 分钟），再按 `module-catalog.md` 拆模块目录（可以开子代理分段拆）。库里缺 `style-baseline.json` 时补跑 `python scripts/style_gap.py baseline <参考稿.pptx> <参考稿库>`。
+- 参考稿和参考稿库：运行 `python scripts/find_library.py [<用户说的参考稿路径或名称>]`，用它打印的 `library:` 和 `reference:`。
+  - 用户没提参考稿时，它取已安装的默认库（`~/.claude/sam-ppt/references/`，由 `install.py` 安装）；
+  - 用户给了参考稿文件时，先找文件旁边的库，再找已安装的同一份稿的库；
+  - 都找不到时，它会打印预处理命令：运行 `prepare_reference.py`（约 2 分钟），再按 `module-catalog.md` 拆模块目录（可以开子代理分段拆）。没有任何已安装库、用户也没提参考稿时，问用户要参考稿。
+  - 库里缺 `style-baseline.json` 时补跑 `python scripts/style_gap.py baseline <参考稿.pptx> <参考稿库>`。
+- 运行产物（项目、计划、日志、成品）都放运行目录，不写进参考稿库。
+
+**安装**（每台机器一次，Skill 或参考稿库更新后再跑一次）：`python scripts/install.py <参考稿.pptx> <参考稿库> --name <名称> [--default]`。它把 Skill 装到 `~/.claude/skills/`，把参考稿库连同参考稿装到 `~/.claude/sam-ppt/references/<名称>/`。之后用户在任何放着大纲的文件夹里说一句话即可。
 - 模块目录没有用户审定记录时，照用，并在运行日志和最终汇报里注明"模块目录未经审定"。
 - 计时、`plan.md`、运行日志、成品 `deck.pptx` 和 `renders/`、最终汇报，都按本文件的规定做，不需要用户提要求。
 
