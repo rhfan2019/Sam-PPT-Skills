@@ -41,7 +41,7 @@
 - `start_level`：`完好` 指起页后与原稿一致。`可用` 指只缺照片或 PNG 图标，或者参考稿原文不换行、竖排变横排；这些在换成大纲文字、补图标后会消失，但竖排文字要改成横排或手动换行。`结构损坏` 指图形本身坏了，例如三维效果丢失、图表数据系列消失、渐变光束变成硬边，这种模块不能用；其中只有原生图表重排的，可以只取外框，再按大纲数据重画图表。`未验证` 指没有起页渲染图，用之前先单页起页并渲染确认。
 - `bbox_extra`：可选。一个矩形框不全的 L 形模块，用第二个框补上，`compose_page.py` 写作 `NN:x,y,w,h+x2,y2,w2,h2@X,Y`。
 - `dependency`：`compose_page.py` 只搬中心在框内、且至少 60% 页面面积在框内的元素（旋转 90° 的形状按它在页面上的样子算）。与相邻模块共用的矩形或圆角矩形底板，会自动裁成框的大小带过来；其他会留在原处的东西（不规则的共用底形、跨模块连线）写在这里。
-- 写完后运行 `python scripts/check_modules.py <modules.json> <import>/authoring-svg-flat --write`。它核对每个模块实际会搬走多少元素、哪些元素被留下、`logic` 编号是否合法，并自动写入三个字段，生成 `modules-index.txt`（一行一个模块，第 1 步读它）：
+- 写完后运行 `python scripts/check_modules.py <modules.json> <import>/authoring-svg-flat --write`。它核对每个模块实际会搬走多少元素、哪些元素被留下、`logic` 编号是否合法，并自动写入三个字段，生成 `modules-index.txt`（一行一个模块，供人浏览；做页面时不通读它，按分区用 `pick_modules.py` 取候选）：
   - `texture`：模块里带渐变、阴影、半透明的形状数和形状总数；
   - `texture_level`：按"3×渐变 + 3×阴影 + 0.5×半透明"在全目录里三等分得到的高、中、低；
   - `backplates`：会一起带过来的共用底板数。
@@ -53,4 +53,4 @@
 
 ## 用法
 
-第 2 步按 `page-zoning.md` 第四节从目录里挑模块；第 3 步把选中模块的 `bbox` 交给 `compose_page.py`。目录里的 `parts` 就是第 4 步改页时逐个部件核对的清单。
+第 2 步按 `page-zoning.md` 第四节、用 `pick_modules.py` 从目录里挑模块；第 3 步把选中模块的 `bbox` 交给 `compose_page.py`。目录里的 `parts` 就是第 4 步改页时逐个部件核对的清单。

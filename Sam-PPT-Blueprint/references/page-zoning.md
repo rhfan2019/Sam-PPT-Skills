@@ -58,7 +58,7 @@ rnb-core 实测：内容区 x 36–1244、y 101–672；栏宽 86，栏间距 16
 
 ## 四、从模块目录挑模块
 
-模块目录是 `<参考稿库>/modules.json`，结构见 `module-catalog.md`；先读一行一个模块的 `modules-index.txt` 找候选，再看候选的完整条目。每个分区按下面顺序挑，前 5 条是门槛，第 6 条起在过了门槛的候选里排先后：
+模块目录是 `<参考稿库>/modules.json`，结构见 `module-catalog.md`。每个分区用 `scripts/pick_modules.py` 取候选：第 1、2 条门槛和第 3、6、7 条的排序由脚本做，第 4、5、8 条读它打印的 `parts`、`not_for`、`style` 由主代理判断。每个分区按下面顺序挑，前 5 条是门槛，第 6 条起在过了门槛的候选里排先后：
 
 1. 只用 `start_level` 为 `完好` 或 `可用` 的模块，`可用` 的要读 `start_note`，知道补什么。`未验证` 的先单页起页并渲染确认；`结构损坏` 的不用。
 2. `logic` 含这个分区要表达的关系编号；`diagram` 是 `logic-diagrams.md` 第二节对应的首选图示。
@@ -70,6 +70,8 @@ rnb-core 实测：内容区 x 36–1244、y 101–672；栏宽 86，栏间距 16
 8. 风格：同一页的模块，`style` 要相近（同为扁平或同为立体、阴影一致）；全稿的主模块尽量不重复，相邻两页不用同一种主图示。
 
 模块下面与相邻模块共用的底板（矩形或圆角矩形的面板），`compose_page.py` 会自动裁成模块框的大小一起带过来（`backplates` 字段是数量）；横贯全页、旋转过的光条和装饰条，只要大部分落在框里也会带上。其他留在原页的东西见 `dependency`。
+
+**按数据画的图**：漏斗层宽、条长、柱高、甘特条这类尺寸由数据决定的分区，用 ppt-master 原生图表模板（`funnel_chart`、`butterfly_chart`、`gantt_chart`、`bullet_chart`、`column_chart`、`horizontal_bar_chart`、`stacked_bar_chart` 等，见 `chart-vocabulary.md`）；挑中的参考稿模块只提供外框、底板、标题和装饰。
 
 **参考稿里没有的关系**：参考稿不一定覆盖所有关系。rnb-core 就没有路线图、组织结构、问题树、鱼骨、权衡、偏差、相关、瀑布这几类模块。遇到这些关系，这个分区改用 ppt-master 的原生图表或表格（`chart/<key>`、`table/<key>`），或用 `executor-structure.md` 的关系原子手写，外观按全稿约定的配色、字体、阴影、圆角来配。**不要为了用上参考稿，拿含义不同的模块去硬套。**
 

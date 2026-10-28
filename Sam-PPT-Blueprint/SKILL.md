@@ -23,6 +23,8 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 | `scripts/edit_page.py` | 按 id 改页：列模块、改字、删、平移、复制、换色、清扫，可一次批量执行 |
 | `scripts/check_reuse.py` | 页面还剩多少形状来自参考稿（只作提示） |
 | `scripts/check_modules.py` | 核对模块目录（实际搬走多少元素、留下什么、关系编号），用 `--write` 写入质感指标并生成一行一个模块的 `modules-index.txt` |
+| `scripts/pick_modules.py` | 按一个分区的关系编号、单元数、分区尺寸，从目录里按挑选顺序列出前几个候选的完整条目，并拼一张候选裁切图 |
+| `scripts/review_packet.py` | 把规划、大纲原文、用到的模块的关系部件按页拼成一个审查包，给含义审查员读 |
 | `scripts/export.py` | 代替直接调用 `svg_to_pptx.py`，修好中文字体（见"中文字体"） |
 | `scripts/render.ps1` | PowerPoint 渲染成 PNG |
 | `scripts/dump_blueprint.py` | 列出一页的全部形状和配色（需要细看时用） |
@@ -43,7 +45,7 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 
 ### 1. 读规范和参考稿库
 
-读 `references/logic-diagrams.md`、`references/page-zoning.md` 全文，`<参考稿库>/grid.txt`、`start-check.txt`，以及 `modules-index.txt`（一行一个模块：角色、图示、关系、单元、起页状态、质感、适合什么）；选中候选后，再用一段 Python 从 `modules.json` 只打印这几个候选的完整条目。只在需要时看 `started-renders/slide-NN.png`（1600 px，不要缩小）。
+读 `references/logic-diagrams.md`、`references/page-zoning.md` 全文，`<参考稿库>/grid.txt`、`start-check.txt`。**不通读** `modules-index.txt` 和 `modules.json`，也不翻整页渲染图：候选模块在第 2 步按分区用 `pick_modules.py` 取。（ppt-master 选图表也是这样：`visualization_recall.py` 从索引按语义召回候选，再由代理判断。）
 
 ### 2. 规划全稿（主代理一次做完，写进 `plan.md`）
 
@@ -52,16 +54,36 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 1. **填内容结构卡**（`logic-diagrams.md` 第一节）：结论、单元、维度、方向、闭合、权重、数量、好坏、次要信息。
 2. **定关系**：按 `logic-diagrams.md` 第二节的判断标准，定出**主关系**（直接证明结论的那个，一页一个）和最多一个**次要关系**，写编号。依赖词、循环词、多维对比是硬信号。
 3. **定分区**：按 `page-zoning.md` 第三节选一个分区模板，用 `grid.txt` 算出每个分区的坐标。
-4. **挑模块**：按 `page-zoning.md` 第四节，为每个分区从 `modules.json` 挑一个模块（可以来自不同参考页）；逐条核对它的 `parts`，写下要删改的关系部件；含义都对得上的候选里，优先选 `texture_level` 高的。参考稿里没有合适的模块时，这个分区用 ppt-master 的原生图表或表格（`chart/<key>`、`table/<key>`），或用 `executor-structure.md` 的关系原子手写，但整页的外壳和其余分区仍来自参考稿。
+4. **挑模块**：每个分区跑一次
+   ```
+   python scripts/pick_modules.py <参考稿库>/modules.json --logic <编号> [--logic <编号>] --units <单元数> --zone <宽>x<高> [--role <角色>] --crops <运行目录>/work/pick-PNN-<分区>.png
+   ```
+   它按 `page-zoning.md` 第四节的顺序过门槛、排先后，打印前 5 个候选的完整条目（含 `parts`、`not_for`），并拼一张候选裁切图（取自 `started-renders/`）。主代理只看这张裁切图，逐条核对第一名的 `parts` 和 `not_for`；不成立就看下一名。写下要删改的关系部件。脚本说"没有过门槛的模块"时，这个分区用 ppt-master 的原生图表或表格（`chart/<key>`、`table/<key>`），或用 `executor-structure.md` 的关系原子手写，但整页的外壳和其余分区仍来自参考稿。
+   **按数据画的图用原生图表**：漏斗层宽、条长、柱高、甘特条这类尺寸由数据决定的图，一律用 ppt-master 的原生图表模板（`chart-vocabulary.md`：`funnel_chart`、`butterfly_chart`、`gantt_chart`、`bullet_chart`、`column_chart`、`horizontal_bar_chart`、`stacked_bar_chart` 等），按 `native-data-interface.md` 写数据；参考稿模块只取外框、底板、标题和装饰。不要按数据手工重算形状尺寸（v5 实测，一页手算漏斗占了改页阶段的关键路径）。
 5. **定图标**：每个要换的图标写"模块 → 图标 → 理由"，图标意思要和内容对应；参考稿自带、意思不符的语义图标要换掉。
 
-`plan.md` 写四部分：
-- **规划表**，每页一块：结论｜主关系、次要关系（编号）｜分区模板｜每个分区：模块编号、来源 bbox → 目标 X,Y,W｜保留的部件及其含义｜要删改的部件｜大纲条目 → 模块位置｜图标｜图表（类型和数据）。
-- **全稿约定**：外壳页（取哪一页的页头页脚）、页头右侧标签、页脚来源与机构写法、好色和坏色、图标库、正文和说明字号下限。
-- **分工**：按第 4 步的分段规则写出每段的页。
-- **推算值**：大纲里没有、需要计算才能画的数（例如按比例算的条长、漏斗层宽），写明算式。
+`plan.md` 只写决策，不写理由和描述（ppt-master Quick 的决策本来只留在上下文里；这份文件只为给审查员和 fork 对照）。格式固定：
 
-**含义审查（必做）**：写完 plan.md 后，开一个**普通子代理**（不用 fork，要它不带主代理的思路），prompt 用 `references/review-brief.md`。它逐页回答"按这个规划，读者从图上会读出什么关系，和大纲是否一致"。主代理按审查意见改 plan.md，并在 plan.md 末尾写"审查与处理"一段，然后再进入第 3 步。
+```
+## 全稿约定
+外壳页 NN｜页头右侧标签｜页脚写法｜好色 #…、坏色 #…、强调 #…｜图标库｜正文/说明字号下限
+
+## P01 <页文件名>
+结论：…｜主 D2 / 次 D3｜<分区模板>｜图标：模块 → 图标｜图表：chart/<key> 数据…
+| 分区 | 模块 | 来源 bbox → 目标 X,Y,W | 大纲条目 → 位置 | 删改的关系部件 |
+|---|---|---|---|---|
+| 主图 | 49-B | 49:x,y,w,h @X,Y,W | 四步 → 环上 4 节点 | 删第 5 节点；弧箭头重画成 4 段闭环 |
+
+## 分工
+段 1（主代理）：P01｜段 2：P02｜…
+
+## 推算值
+P02 漏斗层宽：…＝…
+```
+
+每个分区一行；不写结构卡、不抄 `parts` 原文、不写"保留的部件"（未列出的就是保留）。
+
+**含义审查（必做）**：写完 plan.md 后运行 `python scripts/review_packet.py <运行目录>/plan.md <大纲> <参考稿库>/modules.json -o <运行目录>/work/review-packet.md`，它按页把大纲原文、规划行、所用模块的关系部件拼成一个文件，并在旁边生成所用模块的裁切图。然后开一个**普通子代理**（不用 fork，要它不带主代理的思路），prompt 用 `references/review-brief.md`。它逐页回答"按这个规划，读者从图上会读出什么关系，和大纲是否一致"。主代理按审查意见改 plan.md，并在 plan.md 末尾写"审查与处理"一段（每条一行），然后再进入第 3 步。
 
 ### 3. 建项目并拼页（主代理）
 
@@ -75,7 +97,7 @@ python scripts/compose_page.py <项目>/svg_output/NN_页名.svg <参考稿库>/
 
 ### 4. 分段并行改页（fork）
 
-**分段规则**：写页量 W = 页数（数据多或特别密的页算 1.5）。W ≤ 4：主代理全写，不开子代理。否则段数 = min(⌈W ÷ 2⌉, 5)，每段约 2 页，重页分到不同段；同时在写的代理最多 5 个（主代理 + 4 个 fork），段多于 5 时，每收到一个 fork 完成通知就开下一段。
+**分段规则**：按工作量分，不按页数平分。每页工作量 = 1 + 0.5 × 按数据画的图（原生图表或要按数据定尺寸的形状）个数 + 0.5（分区 ≥ 4 时）。总量 ≤ 4：主代理全写，不开子代理。否则：工作量 ≥ 1.5 的页各自单独一段；其余的页两页一段，两页合计不超过 2.5。同时在写的代理最多 5 个（主代理 + 4 个 fork），主代理拿最轻的一段；段多于 5 时，每收到一个 fork 完成通知就开下一段，重段先开。
 
 **开法**：第 3 步做完后，**在同一条消息里**用 Agent 工具为段 2 起的每一段开一个 `subagent_type: "fork"` 的子代理，prompt 用 `references/fork-brief.md`，只替换尖括号里的值。fork 继承主代理到此为止读过的规范、目录、大纲和 plan.md 的思考过程，不用重读、不用重新理解大纲。然后主代理立即写段 1，不等 fork。会话里没有 fork 类型时，按 fork-brief.md 末尾的说明退回普通子代理。（ppt-master `executor-base.md` 要求只由主代理写页，理由是各页共享上游上下文；fork 继承同一份上下文，满足这一本意。用户同意用 fork 并行。）
 
@@ -88,16 +110,17 @@ python scripts/compose_page.py <项目>/svg_output/NN_页名.svg <参考稿库>/
    - **颜色**：按全稿约定的颜色角色；箭头方向跟数值，颜色跟好坏（`logic-diagrams.md` 第四节），需要时用 `color` 对调。
    - 最后一条命令固定是 `sweep`（删除部件后，清掉没有几何的形状和空组，否则导出会失败）。
 3. **图片位**：被删图片留下的位置，用图标库图标、数字或简单形状补上，或让相邻模块占用。**参考稿里用图片做的图表**（起页后整块消失）：在原位置按大纲数据画原生图表。
-4. **图表**：模块里的原生图表保留位置和样式，换成大纲数据；形状画的图表（漏斗层宽、圆柱高度、条长）按数据重算尺寸。按 verify-charts 核对。
+4. **图表**：模块里的原生图表保留位置和样式，换成大纲数据。参考稿用形状画的数据图（漏斗、圆柱、条形），按 plan.md 换成 ppt-master 原生图表模板，放在原图的位置，外框和装饰保留；不手工重算形状尺寸。按 verify-charts 核对。
 5. **部件核对**：逐个读这一页留下的**关系部件**（箭头、环、连线、上下箭头、`+`、连接各块的光束、大小差异、强调色、语义图标），按 `logic-diagrams.md` 第三节的删改规则，含义不成立的就删或改；装饰不动。
-6. 单页检查：`python <PM>/scripts/svg_quality_checker.py <项目> --quick-generate --canonical-authoring --stage page --page <页文件名>`，有阻断就集中修一轮。`python scripts/check_reuse.py <项目>/svg_output <参考稿库>/import/authoring-svg-flat` 看这一页还剩多少来自参考稿。**这个比例只作提示**：因含义不符删掉部件、为收拢空白移动模块而降低，是正确的；低于 50% 时在运行日志里写一句原因即可，不要为了比例保留错误部件或留白。
+6. 单页检查：一段的页**全部写完后**跑一次，每页一条 `python <PM>/scripts/svg_quality_checker.py <项目> --quick-generate --canonical-authoring --stage page --page <页文件名>`，有阻断就集中修一轮再跑一次。不要每改一处就检查（ppt-master Quick 的检查节奏：只在检查点和一次集中修改后跑，不为提前验证写法而跑）。
 7. **不要新建空白 SVG 自己构图。** 需要新增的小构件（图表、图标、补位形状）可以手写，但整页的外壳和各分区必须来自参考稿模块。
+8. **新画的形状放进独立的根组**（`<g id="pNN-…">` 直接挂在根 `<svg>` 下），不要塞进带 `data-pptx-object="shape"` 的导入形状组：导出器只取那种组的几何，组里新加的箭头、图标会丢（v5 第 3 页的环形箭头就是这样丢的）。
 
 **SVG 写法上踩过的坑**：阴影 `filter` 加在具体形状上，不加在 `<g>` 上；角色图元要有 `id`；折线不要用 `marker-end`；图表 JSON 里不能出现裸 `<`；用 OPPOSans B / H 的文字同时写 `font-weight="bold"`；续行 `tspan` 重复父元素的 `x`；模块边界不要互相压线；少数参考页起页后仍有检查错误（见 `start-check.txt`），用到这一页时一并处理。
 
 ### 5. 收口检查（主代理，所有段完成后）
 
-逐条核对 plan.md 的全稿约定和 `page-zoning.md` 第五节的统一检查，在 plan.md 写"核对"一段。然后 `stamp_native_fallbacks.py <项目>/svg_output --write`，`svg_quality_checker.py <项目> --quick-generate --canonical-authoring --stage final --json`，必须 0 阻断。
+逐条核对 plan.md 的全稿约定和 `page-zoning.md` 第五节的统一检查，在 plan.md 写"核对"一段。跑一次 `python scripts/check_reuse.py <项目>/svg_output <参考稿库>/import/authoring-svg-flat`，看每页还剩多少来自参考稿。**这个比例只作提示**：因含义不符删掉部件、为收拢空白移动模块、把形状图换成原生图表而降低，是正确的；低于 50% 的页在运行日志里写一句原因即可，不要为了比例保留错误部件或留白。然后 `stamp_native_fallbacks.py <项目>/svg_output --write`，`svg_quality_checker.py <项目> --quick-generate --canonical-authoring --stage final --json`，必须 0 阻断。
 
 **禁止**：`--skip-validation`、`--enable-dangerous-nonconforming-svg-export`；不装模板、不用 mirror 模式。
 
