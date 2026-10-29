@@ -4,7 +4,8 @@
 
 Writes into <library_dir>:
   import/       ppt-master import workspace (--inheritance-mode both); pages to start from are
-                import/authoring-svg-flat/slide_NN.svg
+                import/authoring-svg-flat/slide_NN.svg, patched by patch_import.py (the importer's own
+                output stays in authoring-svg-flat.orig/; what was patched: import-patches.txt)
   renders/      PowerPoint renders slide-NN.png at 1600 px
   contact/      numbered contact sheets, 12 pages each, for choosing blueprints
   grid.txt      the content box between the header and footer rules and its 12-column grid (zones)
@@ -148,6 +149,9 @@ def main():
         shutil.rmtree(imp)
     run([sys.executable, pm / "scripts/pptx_template_import.py", ref, "-o", imp, "--inheritance-mode", "both"],
         check=True, capture_output=True)
+    if not (lib / "reference.pptx").exists():
+        shutil.copy2(ref, lib / "reference.pptx")  # patch_import.py reads the 3D / wrap facts from it
+    run([sys.executable, HERE / "patch_import.py", lib], check=True)
     run(["powershell", "-ExecutionPolicy", "Bypass", "-File", HERE / "render.ps1", ref, lib / "renders"], check=True)
     contact_sheets(lib / "renders", lib / "contact")
     measure_grid(imp / "authoring-svg-flat", lib / "grid.txt")

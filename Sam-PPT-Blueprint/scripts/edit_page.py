@@ -26,11 +26,15 @@ Several commands can run in one call, separated by " ; " inside one quoted argum
   python edit_page.py batch <page.svg> "del shape-12 shape-13 ; text shape-3 标题 ; move shape-40 0 -20"
 """
 import copy
+import os
 import re
 import shlex
 import sys
 
 from lxml import etree
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import textmodel  # noqa: E402
 
 SVG = "http://www.w3.org/2000/svg"
 NS = {"s": SVG}
@@ -67,28 +71,15 @@ def cmd_list(root):
 
 # ---------- text ----------
 
-def cmd_text(root, id_, new, index=0):
+def cmd_text(root, id_, new, index=0, fit=False, width=None):
     el = find(root, id_)
     texts = [el] if local(el) == "text" else list(el.iter(f"{{{SVG}}}text"))
     if index >= len(texts):
         sys.exit(f"{id_} has {len(texts)} <text> element(s); --index {index} is out of range")
-    t = texts[index]
-    first = next(iter(t.iter(f"{{{SVG}}}tspan")), None)
-    style = {k: v for k, v in (first.attrib.items() if first is not None else []) if k not in ("x", "y", "dx", "dy")}
-    size = float(re.findall(NUM, t.get("font-size") or style.get("font-size") or "14")[0])
-    for c in list(t):
-        t.remove(c)
-    lines = new.replace("\\n", "\n").split("\n")
-    if len(lines) == 1 and not style:
-        t.text = lines[0]
-        return
-    t.text = None
-    for i, line in enumerate(lines):
-        sp = etree.SubElement(t, f"{{{SVG}}}tspan", style)
-        sp.set("x", t.get("x", "0"))
-        if i:
-            sp.set("dy", fmt(size * 1.3))
-        sp.text = line
+    rep = textmodel.replace(texts[index], new, fit=fit, width_override=width)
+    note = textmodel.describe(rep)
+    if note:
+        print(f"text {id_}: {note}")
 
 
 # ---------- move / clone ----------
@@ -334,6 +325,8 @@ def cmd_sweep(root):
                 continue
             g.getparent().remove(g)
             dropped += 1
+        elif g.get("data-pptx-replace-with") or g.get("data-pptx-native-authority"):
+            continue  # a native chart / table: its content is the JSON <metadata>, never empty
         elif not any(isinstance(c.tag, str) and local(c) not in ("metadata", "title", "desc") for c in g):
             g.getparent().remove(g)
             dropped += 1
@@ -347,12 +340,19 @@ def run(root, args):
     if op == "list":
         cmd_list(root)
     elif op == "text":
-        idx = 0
+        idx, fit, width = 0, False, None
         if "--index" in rest:
             i = rest.index("--index")
             idx = int(rest[i + 1])
             rest = rest[:i] + rest[i + 2:]
-        cmd_text(root, rest[0], " ".join(rest[1:]), idx)
+        if "--width" in rest:
+            i = rest.index("--width")
+            width = float(rest[i + 1])
+            rest = rest[:i] + rest[i + 2:]
+        if "--fit" in rest:
+            fit = True
+            rest.remove("--fit")
+        cmd_text(root, rest[0], " ".join(rest[1:]), idx, fit, width)
     elif op == "del":
         cmd_del(root, *rest)
     elif op == "move":

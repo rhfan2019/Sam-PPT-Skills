@@ -9,7 +9,8 @@ visible root <g> must carry data-pptx-bounds and root groups must not overlap (s
   - wraps shell items above the content box into <g id="page-header" data-pptx-role="header">, those
     below it into "page-footer", and shell items inside it into "page-frame" (role decoration);
   - wraps each module's root items (ids "mK-…" from compose_page.py) into <g id="mK-module">;
-  - gives every other root group without bounds (shapes drawn in step 4) bounds from its contents;
+  - gives every other root group without bounds (shapes drawn in step 4) bounds from its contents, and a
+    native chart / table frame left at the root (start_page.py keeps them there) bounds from its frame;
   - nests a bounded group into an earlier one it overlaps, so the page keeps one group per region;
   - marks a module group that overlaps a native chart or table carrier as decoration (overlap-exempt).
 Paint order is kept: a module group spans from its first to its last item, so parts added between
@@ -18,10 +19,14 @@ with every ordinary root group drawn between them, in order (merging the later g
 one alone would push it under everything in between: icons and white text vanished under circles).
 Running it twice changes nothing. Content-box coordinates come from <参考稿库>/grid.txt.
 """
+import os
 import re
 import sys
 
 from lxml import etree
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import textmodel  # noqa: E402
 
 SVG = "http://www.w3.org/2000/svg"
 NUM = re.compile(r"-?\d*\.?\d+(?:[eE][-+]?\d+)?")
@@ -64,17 +69,34 @@ def own_box(d):
         if xs and ys:
             return [min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)]
     if t == "text":
-        size = float(nums(d.get("font-size") or "14")[0]) if nums(d.get("font-size")) else 14.0
-        chars = len("".join(d.itertext()))
-        return [g("x"), g("y") - size, chars * size, size * 1.3]
+        return text_box(d)
     if t == "use":
         return [g("x"), g("y"), g("width"), g("height")]
     return None
 
 
+def text_box(d):
+    """Every visual line counted (a stacked vertical label is tall, not wide), widths measured with the
+    checker's estimator through textmodel.py; the anchor decides where the box starts."""
+    size = textmodel.style_of(d, {})[0]
+    lines = []
+    for p in textmodel.parse(d):
+        lines += textmodel.split_at(p, p.breaks) if p.breaks else [p.runs]
+    w = max((textmodel.line_width(d, ln) for ln in lines), default=0.0)
+    lh = textmodel.line_height(d, size)
+    x, y = (nums(d.get("x")) or [0.0])[0], (nums(d.get("y")) or [0.0])[0]
+    anchor = d.get("text-anchor") or "start"
+    x0 = x - w / 2 if anchor == "middle" else x - w if anchor == "end" else x
+    return [x0, y - size, w, (len(lines) - 1) * lh + size * 1.3]
+
+
 def box_of(e):
     b = own_box(e)
     if b:
+        # a shape's frame, plus its text where the text runs past the frame (the checker measures both)
+        for t in e.iter(f"{{{SVG}}}text"):
+            if "".join(t.itertext()).strip() and not any(local(a) == "metadata" for a in t.iterancestors()):
+                b = union(b, text_box(t))
         return b
     for d in e.iter():
         if d is not e and isinstance(d.tag, str):
@@ -119,6 +141,8 @@ def run(path, y0, y1, role):
     buckets, order = {}, []
     for c in kids:
         i = c.get("id") or ""
+        if c.get("data-pptx-replace-with") and not c.get("data-pptx-bounds") and len(nums(c.get("data-pptx-frame"))) == 4:
+            c.set("data-pptx-bounds", fmt(clamp(nums(c.get("data-pptx-frame")))))  # a native chart / table frame
         if c.get("data-pptx-bounds") or c.get("data-pptx-role") or c.get("data-pptx-replace-with"):
             continue
         m = re.match(r"(m\d+)-", i)
@@ -140,13 +164,28 @@ def run(path, y0, y1, role):
             buckets[key] = (r, [])
             order.append(key)
         buckets[key][1].append(c)
+    # modules cut from one reference page are interleaved in that page's paint order (compose_page.py):
+    # module keys whose spans overlap become one group, named after the first
+    kids_now = list(root)
+    kids_now_at = list(kids_now)
+    spans = {k: [kids_now.index(buckets[k][1][0]), kids_now.index(buckets[k][1][-1])]
+             for k in order if k.endswith("-module")}
+    merged = []
+    for k in sorted(spans, key=lambda k: spans[k][0]):
+        if merged and spans[k][0] <= merged[-1][1][1]:
+            merged[-1][1][1] = max(merged[-1][1][1], spans[k][1])
+        else:
+            merged.append([k, list(spans[k])])
     for key in order:
         if root.xpath(f'./*[@id="{key}"]'):
             continue
         r, items = buckets[key]
         if key.endswith("-module"):
+            span = next((sp for k, sp in merged if k == key), None)
+            if span is None:
+                continue  # merged into an earlier module's group
             kids_now = list(root)
-            lo, hi = kids_now.index(items[0]), kids_now.index(items[-1])
+            lo, hi = kids_now.index(kids_now_at[span[0]]), kids_now.index(kids_now_at[span[1]])
             items = [c for c in kids_now[lo:hi + 1] if local(c) not in ("", "defs", "style", "title", "desc")
                      and not c.get("data-pptx-role") and not c.get("data-pptx-replace-with")
                      and not (c.get("id") or "").startswith("shape-")]

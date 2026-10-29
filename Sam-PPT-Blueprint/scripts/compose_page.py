@@ -27,6 +27,7 @@ from lxml import etree
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import start_page  # noqa: E402
 from start_page import strip  # noqa: E402
 
 SVG = "http://www.w3.org/2000/svg"
@@ -57,19 +58,29 @@ def parse(path):
 
 # ---------- where an element sits ----------
 
-def inside(e, x, y, w, h, share=0.6):
-    """Centre inside the box and at least `share` of the frame's area inside it: a module keeps its own
-    panels even when the box is a few px off, and leaves behind backplates shared with neighbours."""
-    c = centre(e)
-    if not c or not (x <= c[0] <= x + w and y <= c[1] <= y + h):
-        return False
+def share_in(e, x, y, w, h):
     f = shown_frame(e)
     if not f:
-        return True
+        return 1.0
     fw, fh = max(f[2], 1), max(f[3], 1)
     ox = max(0, min(f[0] + fw, x + w) - max(f[0], x))
     oy = max(0, min(f[1] + fh, y + h) - max(f[1], y))
-    return ox * oy >= share * fw * fh
+    return ox * oy / (fw * fh)
+
+
+def is_panel(e):
+    """A plain rect / roundRect with nothing written on it: the kind of backplate several modules share."""
+    return e.get("data-pptx-prst") in ("rect", "roundRect") and not "".join(e.itertext()).strip()
+
+
+def inside(e, x, y, w, h, share=0.6):
+    """Centre inside the box. A plain panel also needs `share` of its area inside (a backplate shared with
+    neighbours stays behind and is cut to the box by backplate()); anything else is taken whole even when
+    it pokes out of the box, so a circle or label straddling the box edge is never silently lost."""
+    c = centre(e)
+    if not c or not (x <= c[0] <= x + w and y <= c[1] <= y + h):
+        return False
+    return not is_panel(e) or share_in(e, x, y, w, h) >= share
 
 
 def shown_frame(e):
@@ -125,7 +136,8 @@ def plate_path(x, y, w, h, prst, adj):
 def backplate(e, boxes, min_cover=0.3):
     """A plain panel (rect / roundRect, no text, unrotated or turned by a right angle) that lies under the
     module but belongs to several modules or the whole page: a copy cut to the module's boxes, so the
-    module keeps its ground."""
+    module keeps its ground. Returns [plate] or, when the cut runs through an outlined panel, [plate without
+    outline, the outline's own sides only] (a dashed frame cut in two drew a dashed line across the chart)."""
     if e.get("data-pptx-prst") not in ("rect", "roundRect") or             any("".join(t.itertext()).strip() for t in e.iter(f"{{{SVG}}}text")):
         return None
     f = nums(e.get("data-pptx-frame"))
@@ -160,7 +172,24 @@ def backplate(e, boxes, min_cover=0.3):
         plate.set("transform", f"rotate({fmt(angle)} {fmt(ncx)} {fmt(ncy)})")
     g = [c for c in plate if local(c) == "path" and c.get("data-pptx-part") == "geometry"][0]
     g.set("d", plate_path(lx, ly, lw, lh, e.get("data-pptx-prst"), adj[0] if adj else 16667))
-    return plate
+    stroke = g.get("stroke")
+    cut = [x0 > ex + 0.5, y0 > ey + 0.5, x1 < ex + ew - 0.5, y1 < ey + eh - 0.5]  # left, top, right, bottom
+    if not any(cut) or turned or not stroke or stroke == "none":
+        return [plate]
+    # the box cut through the panel: its outline would draw a line across the page at the cut
+    g.set("stroke", "none")
+    sides = [((x0, y0), (x0, y1)), ((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x0, y1), (x1, y1))]
+    d = " ".join(f"M {fmt(a[0])} {fmt(a[1])} L {fmt(b[0])} {fmt(b[1])}" for (a, b), c in zip(sides, cut) if not c)
+    if not d:
+        return [plate]
+    edge = etree.Element(f"{{{SVG}}}g", {"id": (e.get("id") or "plate") + "-edge", "data-pptx-object": "shape",
+                                          "data-pptx-frame": " ".join(fmt(v) for v in (x0, y0, x1 - x0, y1 - y0)),
+                                          "data-pptx-semantic-object": "shape"})
+    line = etree.SubElement(edge, f"{{{SVG}}}path", {"d": d, "fill": "none", "data-pptx-part": "geometry"})
+    for a in ("stroke", "stroke-width", "stroke-opacity", "stroke-dasharray", "stroke-linecap"):
+        if e.find(f"{{{SVG}}}path") is not None and e.find(f"{{{SVG}}}path").get(a):
+            line.set(a, e.find(f"{{{SVG}}}path").get(a))
+    return [plate, edge]
 
 
 # ---------- affine rewrite p -> s*p + (tx, ty) ----------
@@ -288,16 +317,27 @@ def user_space(d):
 def select(src, boxes):
     """What a module takes from its page: its own elements, then copies of shared backplates under it."""
     picked, plates = [], []
-    for e in src:
+    for i, e in enumerate(src):
         if not isinstance(e.tag, str) or local(e) in ("defs", "metadata", "title", "desc") or is_background(e):
             continue
         if any(inside(e, *b) for b in boxes):
             picked.append(copy.deepcopy(e))
+            ORDER[id(picked[-1])] = i
+            if any(share_in(e, *b) < 0.6 for b in boxes if inside(e, *b)):
+                STRADDLE.append(e.get("id") or "?")
         else:
             p = backplate(e, boxes)
             if p is not None:
-                plates.append(p)
+                for q in p:
+                    plates.append(q)
+                    ORDER[id(q)] = i
+            elif not is_panel(e) and not is_background(e) and local(e) != "use" and max(share_in(e, *b) for b in boxes) >= 0.25:
+                LEFT.append(e.get("id") or "?")
     return plates + picked, plates
+
+
+STRADDLE, LEFT = [], []  # per module: taken although sticking out; mostly inside but centred outside
+ORDER = {}  # id(element) -> its paint index on the source page
 
 
 def parse_module(tok):
@@ -329,12 +369,17 @@ def main():
             continue
         root.remove(e)
     notes = [f"shell: slide_{shell_no:02d}.svg"]
+    placed = []  # (source page, source paint index, module, element)
 
     for k, tok in enumerate([t for t in specs if not t.startswith("shell=")], 1):
         n, (x, y, w, h), extra, X, Y, W = parse_module(tok)
         src = parse(page(n))
         s = W / w if W else 1.0
         tx, ty = X - x * s, Y - y * s
+        STRADDLE.clear()
+        LEFT.clear()
+        lost_charts = [f for f in start_page.UNSUPPORTED
+                       if len(nums(f)) == 4 and x <= nums(f)[0] + nums(f)[2] / 2 <= x + w and y <= nums(f)[1] + nums(f)[3] / 2 <= y + h]
         picked, plates = select(src, [(x, y, w, h)] + ([tuple(extra)] if extra else []))
         if not picked:
             sys.exit(f"module {k} ({tok}): no top-level element lies inside the box")
@@ -376,12 +421,22 @@ def main():
             spec += f" +{','.join(fmt(v) for v in extra)}"
         root.append(etree.Comment(f" module {k}: {spec} "))
         for e in picked:
-            root.append(e)
+            placed.append((n, ORDER.get(id(e), 0), k, e))
         warn = f"; font sizes x{s:.2f}" if s < 0.85 else ""
         notes.append(f"module {k}: {spec}: {len(picked)} element(s) incl. {len(plates)} shared backplate(s) cut to the box, "
                      f"{len(mdefs)} def(s){warn}"
-                     + (f", {dangling} binding(s) to shapes outside the box dropped" if dangling else ""))
+                     + (f", {dangling} binding(s) to shapes outside the box dropped" if dangling else "")
+                     + (f"; unsupported chart(s) not carried over, draw again with a native chart: {' | '.join(lost_charts)}" if lost_charts else "")
+                     + (f"; taken whole although they stick out of the box: {' '.join(STRADDLE)}" if STRADDLE else "")
+                     + (f"; LEFT BEHIND (a quarter or more inside, centre outside; widen the box if they belong): {' '.join(LEFT)}" if LEFT else ""))
 
+    # paint order: pages in the order their first module was given; modules cut from the same page keep
+    # that page's order between them, so a panel of the lower module never covers the upper module's parts
+    first = {}
+    for n, _, k, _ in placed:
+        first.setdefault(n, k)
+    for *_, e in sorted(placed, key=lambda p: (first[p[0]], p[1], p[2])):
+        root.append(e)
     root.insert(0, etree.Comment(" composed: " + " | ".join(notes) + " "))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(etree.tostring(root, encoding="utf-8"))

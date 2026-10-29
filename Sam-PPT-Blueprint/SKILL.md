@@ -20,13 +20,16 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 | `scripts/compose_page.py` | 用外壳页加若干模块（可来自不同参考页）拼出一页，可平移和等比缩放 |
 | `scripts/start_page.py` | 整页照搬一张参考页作为起点 |
 | `scripts/inline_icons.py` | 起页时把参考稿的小矢量图标（页头手形等）转成原生可编辑形状，`start_page` 和 `compose_page` 自动调用 |
+| `scripts/textmodel.py` | 换字的核心（`edit_page.py text` 调用）：按原文本的段落、run 样式（项目符号、"标签：正文"的分色、大数字 + 小单位、段前距）写入新字，用 ppt-master 检查器同一个测宽函数按框宽折行，放不下时报告 |
+| `scripts/patch_import.py` | 参考稿库预处理时补回导入丢掉的东西：3D 旋转压扁、窄框自动折行、页外隐藏文字、表格合并单元格、标出 ppt-master 不支持的图表（`prepare_reference.py` 自动调用） |
+| `scripts/ladder.py` | **回归阶梯**：参考页原样导出 → 起页 → 原字回写 → 加长 → 拆模块，逐级和参考页比 SSIM，带验收标准；改了任何页面脚本都要重跑 |
 | `scripts/edit_page.py` | 按 id 改页：列模块、改字、删、平移、复制、换色、清扫；按框批量平移 / 删除一个单元（`movebox`、`delbox`、`boxes`，删单元后重排间距用）；改填充描边虚线（`style`）；加参考稿阴影（`shadow`），可一次批量执行 |
 | `scripts/resize_shape.py` | 改矩形、圆角矩形、椭圆的尺寸（拉高卡片、加宽标签块、改文字框宽度） |
 | `scripts/place_text.py` | 重新定位文字：基线、字号、行距、对齐、颜色、粗细（拆块后把文字放进载体中间） |
 | `scripts/check_reuse.py` | 页面还剩多少形状来自参考稿（只作提示） |
 | `scripts/check_modules.py` | 核对模块目录（实际搬走多少元素、留下什么、关系编号），用 `--write` 写入质感指标并生成一行一个模块的 `modules-index.txt` |
 | `scripts/pick_modules.py` | 按分区的关系编号、单元数、分区尺寸，从目录里按挑选顺序列出候选的完整条目和裁切图；`--batch` 一次做完整稿所有分区 |
-| `scripts/check_text.py` | 列出页面上不是来自大纲原文的文字（作者补的读法标签、参考稿残留） |
+| `scripts/check_text.py` | 列出页面上不是来自大纲原文的文字（作者补的读法标签、参考稿残留）；接受只删字的压缩标签，但要求原句在本页说明或备注里 |
 | `scripts/group_page.py` | 收口时给页面补 ppt-master 要求的根结构：页面角色、页头页脚组、每个模块一个带 bounds 的根组 |
 | `scripts/find_library.py` | 找本次用的参考稿和参考稿库：默认用已安装的库，用户给了参考稿就找它的库 |
 | `scripts/install.py` | 一次性安装：Skill 装到 `~/.claude/skills/`，参考稿库装到 `~/.claude/sam-ppt/references/` |
@@ -41,7 +44,7 @@ description: 蓝图重绘法：把用户给的 PPT 大纲做成可编辑 PPTX，
 
 ## 输入
 
-- **大纲**：逐字使用。不增删、不合并、不改写任何信息点和数字；版面放不下时调整版面，不砍内容。信息密度归 Sam-PPT-Outline 管。
+- **大纲**：不增删、不改写任何信息点和数字。版面放不下一句话时，可以把它**压缩成标签**：只删字、不换字、不改语序（`page-zoning.md` 第七节），原句放进本页的说明文字或这一页的备注（`notes/total.md`），信息不丢；`check_text.py` 核对这两条。信息密度归 Sam-PPT-Outline 管。
 - **参考稿库**：用 `prepare_reference.py` 预处理过的目录，包括 `import/`、`renders/`、`started-renders/`、`contact/`、`grid.txt`、`start-check.txt`、`style-baseline.json`，以及按 `module-catalog.md` 拆好、经用户审定的模块目录 `modules.json` 和它的一行索引 `modules-index.txt`（`check_modules.py --write` 生成）。
 - **运行目录**：用户没指定时，就是当前工作目录；项目、成品、渲染图和运行日志都放在这里，不写到运行目录以外。
 
@@ -135,8 +138,8 @@ python scripts/compose_page.py <项目>/svg_output/NN_页名.svg <参考稿库>/
 1. `python scripts/edit_page.py list <页>` 看模块 id 和文字。
 2. 用 `edit_page.py batch <页> "命令 ; 命令 ; …"` 一次做完这一页的修改，按这个顺序：
    - **删**：plan.md 里"要删改的部件"；参考稿的模块里大纲用不上的单元；参考稿内容（品牌名、产品名、案例文字、水印文字）整块删除。**装饰（渐变底、阴影、光斑、光条、底板、立体光泽）保留**，删单元时不要连带删掉它下面的底板。
-   - **数量**：大纲条目比模块多，`clone` 同类部件并按原间距平移；编号圆、底色等同一行的部件要一起复制或平移。条目少就删掉多余的单元，再平移剩下的单元，把空出来的位置收拢（`delbox x y w h` 删一个单元的全部部件，`movebox x y w h dx dy` 平移一个单元；同一批命令里一个部件只会被第一个罩住它的 `movebox` 移动）。卡片、标签块、文字框的尺寸用 `resize_shape.py` 改，文字位置和字号用 `place_text.py` 改。
-   - **文字**：`text <id> 新文字` 在原文本元素里换成大纲原文，保留位置、字体、字号、颜色和对齐；`\n` 换行。放不下时先换行，再微调这个文本框。页面上的每一段文字都必须是大纲原文，或从大纲条目里截取的词组（标题块、维度名、单位）；不补读法说明（阶段名、分组名、"（缺）"、副标题之类）。图示读不懂时改图示，不加字。
+   - **数量**：大纲条目比模块多，`clone` 同类部件并按原间距平移；编号圆、底色等同一行的部件要一起复制或平移。条目少就删掉多余的单元，再平移剩下的单元，把空出来的位置收拢（`delbox x y w h` 删一个单元的全部部件，`movebox x y w h dx dy` 平移一个单元；同一批命令里一个部件只会被第一个罩住它的 `movebox` 移动）。卡片、标签块、文字框的尺寸用 `resize_shape.py` 改（先改框，再 `text` 换字，换字会按新框宽折行）；`place_text.py` 只用于把文字挪进新的载体，不用来手工折行。
+   - **文字**：`text <id> 新文字` 在原文本元素里换成大纲原文（`textmodel.py`）：保留位置、字体、颜色、对齐，以及每段、每个 run 的样式（项目符号、"标签：正文"分色、大数字 + 小单位、段前距），按原文本框的宽度自动折行，居中的块保持居中。`\n` 分段，新段沿用原第 N 段的样式；`¦` 手动指定 run 的分界（如 `754¦万人`）。它报告"放不下"（行数超出外框或单词超宽）时按这个顺序处理：① 压缩成标签（只删字，原句放进本页说明或备注，`page-zoning.md` 第七节）；② 拆到相邻载体；③ 换容量大的模块；④ 最后才加 `--fit`（字号最多降到原来的 0.85 倍、不低于 10 px）。不要用 `place_text.py` 手工逐行摆字代替这一步。页面上的每一段文字都必须是大纲原文，或从大纲条目里截取的词组（标题块、维度名、单位）；不补读法说明（阶段名、分组名、"（缺）"、副标题之类）。图示读不懂时改图示，不加字。
    - **颜色**：按全稿约定的颜色角色；箭头方向跟数值，颜色跟好坏（`logic-diagrams.md` 第四节），需要时用 `color` 对调。plan.md 写的次色单元用 `color` 改成次色实填（标题块、编号圆、关键层）。
    - 最后一条命令固定是 `sweep`（删除部件后，清掉没有几何的形状和空组，否则导出会失败）。
 3. **图片位和图标位**：图标位（`sam/icon-slot`）换成意思对应的图标（直接改 `data-icon` 和 `fill`，或 `add_parts.py icon`，再 `icon_sync.py`），意思找不到的删掉；被删大图留下的位置，用图标库图标、数字或简单形状补上，或让相邻模块占用。**参考稿里用图片做的图表**（起页后整块消失）：在原位置按大纲数据画原生图表。
@@ -164,6 +167,18 @@ python scripts/export.py <项目> --quick-generate --no-notes --native-charts-an
 ```
 
 最后一行必须是 `0 YaHei slot(s) left`，否则退出码为 1。
+
+**有压缩标签、原句放在备注里时，带备注导出**：在 `<项目>/notes/total.md` 里给**每一页**写一节（标题 `# <页文件名，不含 .svg>`，节之间用 `---` 分隔；正文是这一页被压缩的大纲原句，没有压缩的页写这一页的结论句），先跑 `python <PM>/scripts/total_md_split.py <项目>`，再把上面命令里的 `--no-notes` 换成 `--with-notes`。
+
+## 改脚本后的回归
+
+本 Skill 的脚本改动（不是一次运行里的改页）要先过回归阶梯再用于正式运行：改了 `textmodel.py`、`edit_page.py`、`start_page.py`、`compose_page.py`、`group_page.py`、`patch_import.py` 中任何一个，都跑
+
+```
+python scripts/ladder.py <参考稿库> <临时目录>
+```
+
+必须全部 PASS：原字回写后与起页的 SSIM 相差不超过 0.005（换字工具不改变版式），拆成两个模块再放回原位后与起页的 SSIM 不低于 0.99（拆模块不丢部件）。它同时打印"文字加长 1.8 倍"时逐页报告了多少处放不下，那一级只要求通过检查。结果表在 `<临时目录>/ladder.md`，对照图在 `ladder.png`。参考稿库换了或 `patch_import.py` 改了，先重跑 `python scripts/patch_import.py <参考稿库>`（从 `authoring-svg-flat.orig/` 重新生成，可以反复跑）。
 
 ### 7. 渲染自检（最多修两轮）
 

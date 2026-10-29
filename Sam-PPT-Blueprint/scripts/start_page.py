@@ -13,6 +13,9 @@ Removed:
   logos, photos, product shots; never reused);
 - connector bindings to other shapes (data-pptx-start/end-shape-*), which may point
   at removed pictures; the connector keeps its drawn geometry;
+- native charts ppt-master cannot rebuild (patch_import.py tags them data-sam-unsupported, e.g. a
+  date axis): they are pictures here and go with the pictures; their frame is printed so the page
+  draws that chart again with a native chart template;
 - data-pptx-geometry-kind="custom", whose source metadata stays in the import
   workspace; the path is exported as a plain freeform from its own d.
 Everything else (coordinates, presets, gradients, shadows, alpha, text boxes with the
@@ -34,6 +37,8 @@ def strip(svg: str, images_dir: Path | None = None) -> tuple[str, dict]:
     stats = {}
     body, stats["icons_to_native"] = inline_icons(body, images_dir)
     body, stats["icon_slots"] = icon_slots(body)
+    UNSUPPORTED[:] = [m.group(1) for m in re.finditer(
+        r'<image[^>]*data-sam-unsupported="[^"]*"[^>]*data-pptx-frame="([^"]+)"', body)]
     body, stats["images"] = re.subn(r"<image\b[^>]*?(?:/>|>.*?</image>)", "", body, flags=re.S)
     body, stats["crop_wrappers"] = re.subn(r"<svg\b[^>]*?(?:/>|>.*?</svg>)", "", body, flags=re.S)
     body, stats["connector_bindings"] = re.subn(
@@ -49,6 +54,7 @@ def strip(svg: str, images_dir: Path | None = None) -> tuple[str, dict]:
     return head + body, stats
 
 
+UNSUPPORTED = []  # frames of native charts ppt-master cannot rebuild (patch_import.py tags them)
 SLOT_SIDE = 80
 PICTURE = re.compile(r'<g\b[^>]*data-pptx-object="picture"[^>]*>', re.S)
 
@@ -151,6 +157,8 @@ def main():
     texts = len(re.findall(r"<text\b", out))
     print(f"{dst.name}: from {src.name}; removed " + ", ".join(f"{k}={v}" for k, v in stats.items())
           + f"; {texts} reference text element(s) left to rewrite")
+    for f in UNSUPPORTED:
+        print(f"  unsupported chart removed at {f} (x y w h): draw it again there with a native chart template")
 
 
 if __name__ == "__main__":
