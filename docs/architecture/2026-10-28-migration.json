@@ -1,0 +1,67 @@
+[
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/A-workflows.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/A-workflows.md",
+  "sha256": "d44ab5227c86b43cad8d9afed5f94b1c1351b24be03ebfde424f5785235a5f6f"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/B-core-references.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/B-core-references.md",
+  "sha256": "a30bc349822fd6009c1a995dcae0d9b97af95cb0dc73e5ae7a017086740b739b"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/C-styles-images.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/C-styles-images.md",
+  "sha256": "d6c0f12b13dbd3afb99f5da13dd5494ef4e71118565ee7d4e3b2dea48d9904a1"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/D-templates.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/D-templates.md",
+  "sha256": "4385bd2118b934a58d59391a6663f7667ecee7d464bbb195f2dfbaeffc19b7c5"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/E-scripts.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/E-scripts.md",
+  "sha256": "6a865fe6d44d282ffa141e40176fd3b861dc6050c537b000145757cba0712c80"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/ppt-master能力地图-独立复核.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/ppt-master能力地图-独立复核.md",
+  "sha256": "842361cbc0c51cdc00e0d75acb08a9fbc5652bdaf6be119806da17ebd5fe406b"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/ppt-master-map/ppt-master能力地图.md",
+  "to": "Sam-PPT-Skills/docs/architecture/ppt-master-map/ppt-master能力地图.md",
+  "sha256": "0eacb2c7f4a3b130e025a4cf35308f3f03535b2fa45b4cfa09e8aec8730a5b99"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/Sam-PPT-Blueprint-选图问题交接-20261027.md",
+  "to": "Sam-PPT-Skills/docs/archive/2026-10-27-selection-mismatch-handover.md",
+  "sha256": "971e9f051635d0df0fe915c7fbc1c44b1408707e42a8f63d30889150c96cb227"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/Sam-PPT-Blueprint-逻辑表达与页面组合研究报告-20261027.md",
+  "to": "Sam-PPT-Skills/docs/archive/2026-10-27-logic-and-zoning-research.md",
+  "sha256": "8653e35879f6f1811410368cb3f78c97f50fe6c0bff33c92a49bd0f6f5d1d270"
+ },
+ {
+  "from": "Sam-PPT-Lab/handover/Sam-PPT-Blueprint-交接-20261027.md",
+  "to": "Sam-PPT-Skills/docs/plans/blueprint-handover.md",
+  "sha256": "abcb478e07eb58d6651989e670e5e222783ac7e383bf27b181ae4da4d92ef3fc"
+ },
+ {
+  "from": "Sam-PPT-Lab/findings.md",
+  "to": "Sam-PPT-Skills/docs/plans/2026-10-27-s11-blueprint-tests.md",
+  "sha256": "0a1f2c6539401abf566a62e140f10491fb9fda3674c85c83df77d7fde33d1b46"
+ },
+ {
+  "from": "Sam-PPT-Lab/outlines/s11-fde.md",
+  "to": "Sam-PPT-Skills/docs/samples/outlines/s11-fde.md",
+  "sha256": "95fd73ee1a5aa40525f98d7180b66f264f38fe05c945e8550513b17653edefbf"
+ },
+ {
+  "from": "Sam-PPT-Lab/tools/metrics/metrics.py",
+  "to": "Sam-PPT-Skills/tools/metrics.py",
+  "sha256": "e8b043cf59a7cd628ab5de815cb4f8bbb3913e577a5007a3c95138e0505af10c"
+ }
+]
