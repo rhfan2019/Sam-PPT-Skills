@@ -7,6 +7,18 @@
   python edit_page.py move  <page.svg> <id> <dx> <dy>       shift a module (rewrites coordinates)
   python edit_page.py clone <page.svg> <id> <dx> <dy>       copy a module next to itself, ids get a -cN suffix
   python edit_page.py color <page.svg> <id> <#OLD> <#NEW>   swap one colour inside a module (fill/stroke/stop)
+  python edit_page.py movebox <page.svg> <x> <y> <w> <h> <dx> <dy>
+                            shift every drawn object (shape, connector, picture, loose primitive, text) whose
+                            centre lies in the box: re-spaces one unit of a module after deleting or cloning
+                            (within one batch an object is moved by the first movebox that catches it only)
+  python edit_page.py delbox <page.svg> <x> <y> <w> <h>     delete every drawn object centred in the box
+  python edit_page.py style <page.svg> <id> key=value [key=value ...]
+                            set paint attributes on the geometry of <id> (fill, fill-opacity, stroke,
+                            stroke-width, stroke-dasharray; value "none" for dasharray removes it), e.g. turn a
+                            dashed white card into a tinted panel: style m2-shape-9 stroke=none stroke-dasharray=none fill=#C4D7F1 fill-opacity=0.3
+  python edit_page.py shadow <page.svg> <id> [A|B|none]     put the reference shadow (shadowA strong, shadowB light)
+                            on the filled geometry of <id> (solid circles, solid blocks; never on <g>)
+  python edit_page.py boxes <page.svg> <x> <y> <w> <h>      list the objects centred in the box (dry run)
   python edit_page.py sweep <page.svg>                      after deleting parts: give text-only shapes a
                             transparent frame, drop shapes and groups left with nothing to draw
 
@@ -158,6 +170,129 @@ def cmd_clone(root, id_, dx, dy):
     print(f"cloned {id_} -> {id_}-c{n}")
 
 
+# ---------- box commands ----------
+
+OBJ = ("shape", "connector", "picture")
+
+
+def centre(e):
+    fr = e.get("data-pptx-frame")
+    if fr:
+        v = [float(x) for x in re.findall(NUM, fr)]
+        if len(v) == 4:
+            return v[0] + v[2] / 2, v[1] + v[3] / 2
+    n = local(e)
+    try:
+        if n in ("rect", "use", "image"):
+            return float(e.get("x", 0)) + float(e.get("width", 0)) / 2, float(e.get("y", 0)) + float(e.get("height", 0)) / 2
+        if n in ("circle", "ellipse"):
+            return float(e.get("cx", 0)), float(e.get("cy", 0))
+        if n == "text":
+            return float(e.get("x", 0)), float(e.get("y", 0))
+        if n == "line":
+            return (float(e.get("x1", 0)) + float(e.get("x2", 0))) / 2, (float(e.get("y1", 0)) + float(e.get("y2", 0))) / 2
+    except ValueError:
+        return None
+    v = [float(x) for x in re.findall(NUM, e.get("d") or e.get("points") or "")]
+    if len(v) >= 2:
+        xs, ys = v[0::2], v[1::2]
+        return (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    return None
+
+
+def in_box(root, x, y, w, h):
+    """Top-most drawn objects centred in the box (an object group counts once, its children are not listed)."""
+    hits = []
+    for e in root.iter():
+        if not isinstance(e.tag, str):
+            continue
+        n = local(e)
+        is_obj = n == "g" and e.get("data-pptx-object") in OBJ
+        if not (is_obj or n in DRAW | {"text", "use", "image"}):
+            continue
+        if any(a.get("data-pptx-object") in OBJ for a in e.iterancestors(f"{{{SVG}}}g")):
+            continue
+        if any(local(a) in ("defs", "marker", "clipPath", "mask", "pattern") for a in e.iterancestors()):
+            continue
+        if root.find(".//{%s}*[@id='page-header']" % SVG) is not None and any(
+                a.get("id") in ("page-header", "page-footer") for a in e.iterancestors()):
+            continue
+        c = centre(e)
+        if c and x <= c[0] <= x + w and y <= c[1] <= y + h:
+            hits.append(e)
+    return hits
+
+
+MOVED = "data-sam-moved"  # marks objects a movebox already moved in this call (removed before writing)
+
+
+def cmd_movebox(root, x, y, w, h, dx, dy):
+    hits = [e for e in in_box(root, x, y, w, h) if e.get(MOVED) is None]
+    for e in hits:
+        e.set(MOVED, "1")
+    for e in hits:
+        for sub in e.iter():
+            if isinstance(sub.tag, str):
+                shift_el(sub, dx, dy)
+    print(f"movebox: {len(hits)} object(s) moved by {fmt(dx)},{fmt(dy)}")
+
+
+def cmd_delbox(root, x, y, w, h):
+    hits = in_box(root, x, y, w, h)
+    for e in hits:
+        if e.getparent() is not None:
+            e.getparent().remove(e)
+    print(f"delbox: {len(hits)} object(s) deleted")
+
+
+def cmd_boxes(root, x, y, w, h):
+    for e in in_box(root, x, y, w, h):
+        t = "".join(e.itertext()).strip()[:30] if local(e) in ("g", "text") else ""
+        print(f"{e.get('id', '-'):16} {local(e):6} {e.get('data-pptx-prst', ''):12} {t}")
+
+
+PAINT = ("fill", "fill-opacity", "stroke", "stroke-width", "stroke-dasharray", "stroke-opacity", "opacity")
+
+
+def cmd_style(root, id_, *pairs):
+    n = 0
+    geo = [e for e in find(root, id_).iter() if isinstance(e.tag, str) and local(e) in DRAW
+           and (e.get("data-pptx-part") == "geometry" or e.getparent().get("data-pptx-object") is None)]
+    for e in geo:
+        for kv in pairs:
+            k, v = kv.split("=", 1)
+            if k not in PAINT:
+                sys.exit(f"style: {k} is not a paint attribute ({', '.join(PAINT)})")
+            if k == "stroke-dasharray" and v == "none":
+                e.attrib.pop(k, None)
+            else:
+                e.set(k, v)
+        n += 1
+    print(f"{id_}: style {' '.join(pairs)} on {n} geometry element(s)")
+
+
+def cmd_shadow(root, id_, kind="A"):
+    defs = root.find(f"{{{SVG}}}defs")
+    if defs is None:
+        defs = etree.Element(f"{{{SVG}}}defs")
+        root.insert(0, defs)
+    fid = f"shadow{kind}"
+    if kind != "none" and not root.xpath(f'//*[@id="{fid}"]'):
+        op = "0.4" if kind == "A" else "0.22"
+        defs.append(etree.fromstring(
+            f'<filter xmlns="{SVG}" id="{fid}" x="-10%" y="-20%" width="130%" height="160%">'
+            f'<feDropShadow dx="2.8" dy="2.8" stdDeviation="2.7" flood-color="#000000" flood-opacity="{op}"/></filter>'))
+    n = 0
+    for e in find(root, id_).iter():
+        if isinstance(e.tag, str) and local(e) in DRAW and (e.get("fill") or "none") != "none":
+            if kind == "none":
+                e.attrib.pop("filter", None)
+            else:
+                e.set("filter", f"url(#{fid})")
+            n += 1
+    print(f"{id_}: shadow {kind} on {n} filled element(s)")
+
+
 # ---------- color / del / sweep ----------
 
 def cmd_color(root, id_, old, new):
@@ -228,6 +363,14 @@ def run(root, args):
         cmd_color(root, *rest[:3])
     elif op == "sweep":
         cmd_sweep(root)
+    elif op == "style":
+        cmd_style(root, *rest)
+    elif op == "shadow":
+        cmd_shadow(root, *rest[:2])
+    elif op in ("movebox", "delbox", "boxes"):
+        v = [float(t) for t in rest]
+        {"movebox": cmd_movebox, "delbox": cmd_delbox, "boxes": cmd_boxes}[op](root, *v)
+        return op != "boxes"
     else:
         sys.exit(f"unknown command {op}")
     return op != "list"
@@ -247,6 +390,8 @@ def main():
     changed = False
     for step in steps:
         changed |= run(root, step)
+    for e in root.xpath(f"//*[@{MOVED}]"):
+        del e.attrib[MOVED]
     if changed:
         tree.write(path, encoding="utf-8", xml_declaration=False)
 

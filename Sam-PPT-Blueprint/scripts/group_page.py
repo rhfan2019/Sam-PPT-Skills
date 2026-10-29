@@ -12,6 +12,10 @@ visible root <g> must carry data-pptx-bounds and root groups must not overlap (s
   - gives every other root group without bounds (shapes drawn in step 4) bounds from its contents;
   - nests a bounded group into an earlier one it overlaps, so the page keeps one group per region;
   - marks a module group that overlaps a native chart or table carrier as decoration (overlap-exempt).
+Paint order is kept: a module group spans from its first to its last item, so parts added between
+them (add_parts.py --under) stay where they were in z-order; overlapping groups are merged together
+with every ordinary root group drawn between them, in order (merging the later group into the earlier
+one alone would push it under everything in between: icons and white text vanished under circles).
 Running it twice changes nothing. Content-box coordinates come from <参考稿库>/grid.txt.
 """
 import re
@@ -140,6 +144,12 @@ def run(path, y0, y1, role):
         if root.xpath(f'./*[@id="{key}"]'):
             continue
         r, items = buckets[key]
+        if key.endswith("-module"):
+            kids_now = list(root)
+            lo, hi = kids_now.index(items[0]), kids_now.index(items[-1])
+            items = [c for c in kids_now[lo:hi + 1] if local(c) not in ("", "defs", "style", "title", "desc")
+                     and not c.get("data-pptx-role") and not c.get("data-pptx-replace-with")
+                     and not (c.get("id") or "").startswith("shape-")]
         wrap(root, key, items, r)
 
     def groups(pred):
@@ -156,9 +166,15 @@ def run(path, y0, y1, role):
             for b in gs[i + 1:]:
                 bb = nums(b.get("data-pptx-bounds"))
                 if overlap(ba, bb):
-                    b.attrib.pop("data-pptx-bounds")
-                    a.append(b)
-                    a.set("data-pptx-bounds", fmt(clamp(union(ba, bb))))
+                    kids_now = list(root)
+                    between = [c for c in kids_now[kids_now.index(a) + 1:kids_now.index(b) + 1]
+                               if c in gs]  # ordinary bounded groups from a to b, in paint order
+                    box = ba
+                    for c in between:
+                        box = union(box, nums(c.get("data-pptx-bounds")))
+                        c.attrib.pop("data-pptx-bounds")
+                        a.append(c)
+                    a.set("data-pptx-bounds", fmt(clamp(box)))
                     changed = True
                     break
             if changed:

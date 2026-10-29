@@ -26,7 +26,7 @@ from PIL import Image
 
 ARROWS = re.compile(r'prst="(?:rightArrow|leftArrow|upArrow|downArrow|leftRightArrow|upDownArrow|chevron|homePlate|'
                     r'triangle|curvedRightArrow|curvedLeftArrow|curvedUpArrow|curvedDownArrow|circularArrow|'
-                    r'uturnArrow|bentArrow|notchedRightArrow|stripedRightArrow)"')
+                    r'uturnArrow|bentArrow|notchedRightArrow|stripedRightArrow|flowChartMerge)"')
 LINE_ENDS = re.compile(r'<a:(?:tailEnd|headEnd) type="(?:triangle|arrow|stealth)"')
 SHAPES = re.compile(r"<p:(?:sp|cxnSp|graphicFrame|pic)>")
 

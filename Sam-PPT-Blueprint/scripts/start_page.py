@@ -3,6 +3,11 @@ strip only what cannot carry over, so the page is edited from the blueprint, not
 
 Kept as native shapes: the reference's small vector icons (the header hand, icon badges), converted
 from <image href="*.svg"> to editable paths by inline_icons.py.
+Left as icon slots: small raster pictures (PNG / JPEG / EMF icons, at most SLOT_SIDE px) become
+<use data-icon="sam/icon-slot" x y width height> at the picture's frame, so the icon position is not
+lost with the photo (rnb-core: 156 of its 434 icons are PNG; dropping them was half of why the
+2026-10 S/4 run looked bare). The author fills each slot with a library icon whose meaning fits, or
+deletes it; page_metrics.py flags slots left over and the checker rejects the unknown icon.
 Removed:
 - other <image> elements and the nested <svg> picture-crop wrappers around them (reference
   logos, photos, product shots; never reused);
@@ -28,6 +33,7 @@ def strip(svg: str, images_dir: Path | None = None) -> tuple[str, dict]:
     head, body = svg[:head_end], svg[head_end:]
     stats = {}
     body, stats["icons_to_native"] = inline_icons(body, images_dir)
+    body, stats["icon_slots"] = icon_slots(body)
     body, stats["images"] = re.subn(r"<image\b[^>]*?(?:/>|>.*?</image>)", "", body, flags=re.S)
     body, stats["crop_wrappers"] = re.subn(r"<svg\b[^>]*?(?:/>|>.*?</svg>)", "", body, flags=re.S)
     body, stats["connector_bindings"] = re.subn(
@@ -41,6 +47,40 @@ def strip(svg: str, images_dir: Path | None = None) -> tuple[str, dict]:
     body, k2 = fix_fonts(body)
     stats["fonts_to_opposans"] = k1 + k2
     return head + body, stats
+
+
+SLOT_SIDE = 80
+PICTURE = re.compile(r'<g\b[^>]*data-pptx-object="picture"[^>]*>', re.S)
+
+
+def icon_slots(body):
+    """Replace each small raster picture group by an icon slot at its frame."""
+    out, pos, n = [], 0, 0
+    for m in PICTURE.finditer(body):
+        if m.start() < pos:
+            continue
+        frame = re.search(r'data-pptx-frame="([^"]+)"', m.group(0))
+        # find the matching </g> (picture groups may nest a crop <svg> and inner <g>)
+        depth, i = 0, m.start()
+        for t in re.finditer(r"<g\b|</g>", body[m.start():]):
+            depth += 1 if t.group(0).startswith("<g") else -1
+            if depth == 0:
+                i = m.start() + t.end()
+                break
+        inner = body[m.start():i]
+        if not frame or not re.search(r'<image\b[^>]*href="[^"]*\.(?:png|jpe?g|emf|wmf|gif)"', inner, re.I):
+            continue
+        x, y, w, h = (float(v) for v in frame.group(1).split())
+        if max(w, h) > SLOT_SIDE or min(w, h) < 8:
+            continue
+        side = min(w, h)
+        out.append(body[pos:m.start()])
+        out.append(f'<use data-icon="sam/icon-slot" x="{x + (w - side) / 2:.2f}" y="{y + (h - side) / 2:.2f}" '
+                   f'width="{side:.2f}" height="{side:.2f}" fill="#1C4274"/>')
+        pos = i
+        n += 1
+    out.append(body[pos:])
+    return "".join(out), n
 
 
 THEME_FACE = {"+mj-lt": "OPPOSans H", "+mn-lt": "OPPOSans R"}

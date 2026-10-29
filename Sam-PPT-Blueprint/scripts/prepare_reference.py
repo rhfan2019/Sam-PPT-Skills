@@ -14,6 +14,8 @@ Writes into <library_dir>:
                 really looks like once imported (judge modules by these, not by renders/)
   style-baseline.json  the reference's main hues and the range of its colour balance, white space,
                 connectors and texture per content page (style_gap.py baseline; step 7 checks against it)
+  svg-baseline.json    the reference's shape, text-chunk, colour-area, connector and icon density per
+                content page, measured on the SVGs (page_metrics.py baseline; steps 4, 5, 7 check against it)
 The module catalog (modules.json) is written next to these by reading both render sets, and approved
 by the user.
 """
@@ -151,6 +153,7 @@ def main():
     measure_grid(imp / "authoring-svg-flat", lib / "grid.txt")
     start_check(imp / "authoring-svg-flat", lib / "start-check.txt", pm)
     run([sys.executable, HERE / "style_gap.py", "baseline", ref, lib], check=True)
+    run([sys.executable, HERE / "page_metrics.py", "baseline", lib], check=True)
     print(f"reference library ready: {lib}")
 
 
