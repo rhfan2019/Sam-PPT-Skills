@@ -11,6 +11,7 @@
 - 只有用户说"可以了"的页面才算基线；不要自己宣布通过。
 - Skill 不删改大纲内容，信息密度归 Sam-PPT-Outline 管。
 - 测试和真实使用完全一样，步骤见 [docs/guides/testing.md](docs/guides/testing.md)：用 `install.py` 全局安装要测的提交，在只放着 `outline.md` 的独立文件夹里开新会话（不用 fork），只说一句"用 Sam-PPT-Blueprint 把 outline.md 做成 PPT。"。不让用户执行任何脚本或准备环境。
+- `~/.claude/` 下的安装副本只读：测试会话不改 Skill；安装前先 `diff -rq` 对比安装副本和仓库，有仓库外的改动先收回仓库。
 - 提交前运行 `python tools/check_docs.py`，失败如实报告，不绕过。
 
 ## 文档节奏

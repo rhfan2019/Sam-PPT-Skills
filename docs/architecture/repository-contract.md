@@ -1,6 +1,8 @@
 # 仓库与工作资料目录契约
 
-版本：1.0。日期：2026-10-28。适用范围：仓库 `D:\Workspace\Sam-PPT-Skills\` 的全部文件，以及仓库外的工作区 `D:\Workspace\Sam-PPT-Lab\`。
+版本：1.1。日期：2026-10-28。适用范围：仓库 `D:\Workspace\Sam-PPT-Skills\` 的全部文件，仓库外的工作区 `D:\Workspace\Sam-PPT-Lab\`，以及 `install.py` 装到 `~/.claude/` 的安装副本。
+
+1.1 变更：2026-10-28，一次测试会话直接修改了全局安装的 Skill 和参考稿库，改动差点被下一次 `install.py` 覆盖，事后从安装副本收回仓库（a60756e、b7d9330）。新增第 5 节第 4 条"安装副本只读"和第 6 节的参考稿库同步规则；`docs\samples\` 增加 `testset\`。检查器未变。
 
 1.0 变更：2026-10-28，项目初期为避免"测试会话读到开发记录"，把交接、研究报告、问题台账、测试大纲和工具都放在仓库外的 Lab 里，`CLAUDE.md` 还规定开发会话不主动读取，结果文档散在两处、没有版本、没有入口。实际上隔离靠的是安装方式（见第 5 节），与文档放哪里无关。本版把所有人写的文字资料收进仓库 `docs/`，Lab 只留生成物；新增检查器 `tools/check_docs.py`。迁移明细见 [2026-10-28-migration.json](2026-10-28-migration.json)。
 
@@ -37,6 +39,7 @@
 | `plans\` | 待办清单、交接文档、实施计划、测试记录 | `backlog.md`、`<工作线>-handover.md`、`YYYY-MM-DD-<主题>.md`、`YYYY-MM-DD-<对象>-<大纲>-test.md` |
 | `guides\` | 现在就能照做的操作说明 | `<主题>.md` |
 | `samples\outlines\` | 测试大纲，一个案例一个文件 | `<编号>-<主题>.md`，如 `s11-fde.md` |
+| `samples\testset\` | 回归测试集：从各案例节选的几页，每套一个文件 | `<套号>-<主题>.md`，如 `S03-xhs.md` |
 | `archive\` | 已完成的待办、过时的报告和计划 | `backlog-done.md`、保留原日期前缀 |
 
 不按日期、不按生成工具建目录；不保留 `v1`、`-new`、`-final` 这类并存版本，旧版交给 Git 历史。
@@ -54,6 +57,8 @@
 1. `install.py` 只把 Skill 目录复制到 `~/.claude/skills/`，把参考稿库复制到 `~/.claude/sam-ppt/references/`；仓库的 `docs\`、`tools\`、`CLAUDE.md` 都不会被复制。
 2. 测试在一个只放 `outline.md` 的独立文件夹里开新会话（`context: fresh`，不用 fork）。这个文件夹不在仓库里，不继承任何 `CLAUDE.md` 或项目记忆。
 3. 测试会话的提示词只有一句话，不提任何开发资料的路径。
+4. **安装副本只读。** `~/.claude/skills/<Skill>` 和 `~/.claude/sam-ppt/references/` 是 `install.py` 的输出，下次安装会整目录删掉重来。测试会话只产出成品、日志和问题；发现 Skill 要改，记进测试记录和待办，由开发会话在仓库里改、提交，再重装。用户在测试会话里要求顺手修 Skill 时，提醒这条规则：改动要么回到仓库，要么会被下次安装覆盖。
+   开发会话在安装前先用 `diff -rq` 对比安装副本和仓库；有仓库里没有的改动，先收回仓库再装。
 
 所以开发会话可以、也应该读 `docs\`。具体测试步骤见 [测试指南](../guides/testing.md)。
 
@@ -66,6 +71,8 @@ README.md  只写一句"规则见仓库 docs/architecture/repository-contract.md
 ```
 
 运行目录命名：`runs\<yyyymmdd-hhmm>_<对象>_<大纲>\`，对象和大纲只用字母、数字和 `-`，两者之间用一个 `_`，例如 `20261027-2210_blueprint-v7_s11`。目录里放本次用的 `outline.md` 副本、ppt-master 项目目录、导出的 PPTX 和渲染图。运行目录里的 `comparison.md` 之类是当次的原始记录；结论必须写进仓库的测试记录，不能只留在运行目录。
+
+`assets\rnb-blueprint\` 是参考稿库的唯一源：`prepare_reference.py` 输出到这里，再由 `install.py` 装出去，不在安装副本上直接改。
 
 Lab 不是缓存：参考稿库和基线是测试的前提，不整目录清空。要退役的文件先登记，再移到 `D:\Workspace\Archive\<日期>_<说明>\`。
 

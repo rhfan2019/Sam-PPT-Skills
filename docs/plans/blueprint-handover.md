@@ -1,22 +1,23 @@
 # Sam-PPT-Blueprint 交接文档
 
-> 状态：现行，持续更新。最后更新：2026-10-28（文档结构整理；Skill 内容停在 4834378）。
+> 状态：现行，持续更新。最后更新：2026-10-28（收录 S/4 与测试集测试；Skill 内容到 482d064）。
 
 用于开启新会话。读完 `CLAUDE.md`、[目录契约](../architecture/repository-contract.md)和本文即可接手。测试和评估方法见[测试指南](../guides/testing.md)；未完成事项以[待办清单](backlog.md)为准，本文只列编号。
 
 ## 1. 现状一句话
 
-Skill 把大纲做成可编辑 PPTX，学参考稿 `rnb-core.pptx` 的神韵；底层是 ppt-master 6.7.2（Quick Generate、自由设计、扁平导出）。s11 大纲（8 页）跑了 5 轮隔离测试（v3–v7，见[测试记录](2026-10-27-s11-blueprint-tests.md)），之后修了 F13–F17（4834378）并加了全局安装（018b41f），**这两个提交还没测过**。本机当前安装的是 018b41f。
+Skill 把大纲做成可编辑 PPTX，学参考稿 `rnb-core.pptx` 的神韵；底层是 ppt-master 6.7.2（Quick Generate、自由设计、扁平导出）。历次测试：s11 8 页 5 轮（v3–v7，[记录](2026-10-27-s11-blueprint-tests.md)）；S/4 程序迁移 27 页加四套测试集（[记录](2026-10-28-blueprint-s4-testset-test.md)）。流程能稳定走到 0 阻断和导出，F13、F16–F18 已验证；但密度仍远低于参考稿，换字和收口工具有 P0 缺陷（F19–F25）。测试会话在测试中改过的 Skill 已收进仓库（a60756e、b7d9330、482d064），**仓库、全局安装、Lab 参考稿库三者现在一致**，本机安装的是 482d064。
 
 ## 2. 下一步
 
-- 待处理：TEST-001（用户的 30 页案例，验证 F13–F18）。
-- 待决定：DOC-001（模块目录审定）。
+- 待决定：TEST-003（用户盲测，决定两轮修改方向是否保留）——先等它，再动 Skill。
+- 待处理（盲测后）：TEST-004 补阶梯 → F19–F25 → F14、F15、F32。
+- 待决定：F30、F32、F38、F42（规则冲突，需要用户定）；DOC-001（模块目录审定）。
 - 暂缓：FEAT-001、FEAT-002。
 
 ## 3. 已知问题
 
-待验证：F13–F18。待处理：TEST-002。低优先级：TECH-001～003。
+P0：F19–F25。P1：F14、F15、F26–F39。其余见待办清单。
 
 ## 4. 架构速览
 
@@ -36,6 +37,11 @@ Skill 把大纲做成可编辑 PPTX，学参考稿 `rnb-core.pptx` 的神韵；�
 | `scripts/group_page.py` | 收口时补页面角色、页头页脚组、带 bounds 的根组（第 5 步） |
 | `scripts/find_library.py` / `install.py` | 找本次用的参考稿库 / 把 Skill 和参考稿库装到 `~/.claude/` |
 | `scripts/style_gap.py` | `baseline` 生成参考稿指标范围和阴影配方；`check` 逐页对比成品（第 7 步） |
+| `scripts/textmodel.py` | 换字的文字模型：保留段落、项目符号、分段样式，按框宽折行，报告放不下（`edit_page text` 调用） |
+| `scripts/add_parts.py` / `resize_shape.py` / `place_text.py` | 部件工具箱（块箭头、编号圆、胶囊、浅底、要点等）/ 改形状尺寸 / 挪文字 |
+| `scripts/page_metrics.py` / `compare_pages.py` | 导出前量 SVG 的 10 项密度指标对比参考稿 / 成品页和来源参考页并排 |
+| `scripts/patch_import.py` | 修参考稿导入损失（3D 压扁、窄框折行、页外隐藏文字等），由 `prepare_reference.py` 调用 |
+| `scripts/ladder.py` | 往返阶梯回归：改了页面脚本必须先过这套（L0–L4，SSIM 对比原页） |
 | `scripts/export.py` / `fix_cjk_fonts.py` | 导出，并把中文字体修成 OPPOSans |
 | `scripts/check_reuse.py` / `check_modules.py` / `inline_icons.py` / `dump_blueprint.py` / `render.ps1` / `pm.py` | 辅助工具 |
 
@@ -53,10 +59,15 @@ ppt-master 的位置用 `python Sam-PPT-Blueprint/scripts/pm.py` 查。它的完
 | `blue-core.pptx` | BLUE.pptx 的同一精选版，页序与 rnb-core 一一对应 |
 | `rnb-import\` | rnb-core.pptx 的 `pptx_template_import` 导入工作区（`--inheritance-mode both`，65 页） |
 | `rnb-renders\` | rnb-core.pptx 65 页的 PowerPoint 渲染图 p01–p65.png（1600×900）；p04–p65 对应原稿 P06–P67 |
-| `rnb-blueprint\` | 参考稿库：`prepare_reference.py` 生成的 `import\ renders\ started-renders\ contact\ grid.txt start-check.txt style-baseline.json`（含阴影配方），加上模块目录 `modules.json`（247 个模块，未审定，DOC-001）和一行索引 `modules-index.txt` |
+| `rnb-blueprint\` | 参考稿库：`prepare_reference.py` 生成的 `import\ renders\ started-renders\ contact\ grid.txt start-check.txt style-baseline.json`（含阴影配方）、`svg-baseline.json`（page_metrics 的基线）、`import-patches.txt`（导入修补明细；`import\authoring-svg-flat.orig\` 是修补前的导入原样，修补脚本每次从它重来，不要删），加上模块目录 `modules.json`（247 个模块，未审定，DOC-001）和一行索引 `modules-index.txt` |
 | `rnb-baseline.csv` | p04–p65（原稿 P06–P67，62 页）的像素指标，供 `tools/metrics.py --baseline` 对比 |
 
-测试大纲在 [docs/samples/outlines/](../samples/outlines/s11-fde.md)：`s11-fde.md`，8 页，FDE 主题，每页一句"结论"。历次运行在 `Sam-PPT-Lab\runs\`，v7 是最近一次（`20261027-2210_blueprint-v7_s11`）。
+测试大纲在 `docs/samples/`：
+- `outlines/s11-fde.md`：8 页，FDE 主题，每页一句"结论"；
+- `outlines/s4-migration.md`：用户熟悉的 S/4 程序迁移案例，27 页，每页 400–900 字；
+- `testset/`：回归用的四套节选（S03 小红书 4 页、S04 S/4 3 页、S10 零售 4 页、S11 FDE 8 页），每套由一个全新子代理从头跑。
+
+历次运行在 `Sam-PPT-Lab\runs\`，最近一次是 `20261027-2323_blueprint-s4_s4-migration`（含测试集和盲测页）。
 
 ## 6. 本工作线的注意事项
 
