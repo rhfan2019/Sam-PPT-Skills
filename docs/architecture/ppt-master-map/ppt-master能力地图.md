@@ -1,5 +1,7 @@
 # ppt-master 6.7.2 能力地图（含与 Sam-PPT-MBB 的对照）
 
+> 状态：现行参考，适用于 ppt-master 6.7.2（2026-10-26 通读）。插件升级后先重读文档集并更新本目录。独立复核见[同目录复核版](ppt-master能力地图-独立复核.md)。文中"Sam-PPT-MBB"是已退役的上一版 Skill。
+
 2026-10-26。通读范围：`SKILL.md`、`workflows/` 全部 24 个文件、`references/` 全部 110 个文件、`templates/` 全部说明文档、`scripts/README.md` 和 `scripts/docs/` 全部 22 篇，以及约 60 个脚本的命令行定义。说明文档合计约 2.5 万行。每条能力的出处（文件:行号）见同目录 5 份分册：A-workflows、B-core-references、C-styles-images、D-templates、E-scripts。下文的路径都相对于插件根目录。
 
 ---

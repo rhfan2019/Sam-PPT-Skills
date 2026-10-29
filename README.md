@@ -22,3 +22,7 @@ Skill 装到 `~/.claude/skills/`，参考稿库连同参考稿装到 `~/.claude/
 ```
 
 要换参考稿时加一句"参考 <名称或 .pptx 路径>"。
+
+## 开发
+
+文档入口见 [docs/README.md](docs/README.md)：目录契约、交接文档、待办清单、测试指南和测试记录。`tools/` 是不随 Skill 安装的开发工具，提交前运行 `python tools/check_docs.py`。
