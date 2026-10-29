@@ -8,8 +8,8 @@ in style-baseline.json) from <library>/import/authoring-svg-flat and writes <lib
 with the 25th percentile, median and 75th percentile of each metric.
 
 check measures each page the same way and flags what is outside the reference's range. The metrics
-are what makes rnb-core look rich rather than "boxes of text" (measured on the 2026-10 S/4 run: 35
-shapes and 19 chars per text block against the reference's 110 and 9):
+are what makes rnb-core look rich rather than "boxes of text" (a page with a third of the reference's
+shapes and twice its chars per text block reads as text boxes):
   形状     drawn objects in the content box (shapes, connectors, pictures, icons, primitives)   < p25
   文字块   non-empty <text> elements                                                           < p25
   字/块    characters per text element                                                         > p75

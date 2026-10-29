@@ -5,7 +5,7 @@
 prepare_reference.py runs this after the import. It rewrites <lib>/import/authoring-svg-flat/ in
 place, keeping the importer's output once in authoring-svg-flat.orig/ (later runs start from that
 copy, so running it again after this script improves is safe). Measured on rnb-core with the
-round-trip ladder (D:/tmp/work/diagnosis): these are the import losses that made a page look wrong
+round-trip ladder (ladder.py): these are the import losses that made a page look wrong
 before anything else touched it.
 
   3d      a shape with a 3D camera rotation (<a:scene3d><a:camera><a:rot lat lon>) is drawn flat and

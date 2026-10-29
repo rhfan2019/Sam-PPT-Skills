@@ -5,8 +5,7 @@ Kept as native shapes: the reference's small vector icons (the header hand, icon
 from <image href="*.svg"> to editable paths by inline_icons.py.
 Left as icon slots: small raster pictures (PNG / JPEG / EMF icons, at most SLOT_SIDE px) become
 <use data-icon="sam/icon-slot" x y width height> at the picture's frame, so the icon position is not
-lost with the photo (rnb-core: 156 of its 434 icons are PNG; dropping them was half of why the
-2026-10 S/4 run looked bare). The author fills each slot with a library icon whose meaning fits, or
+lost with the photo (rnb-core: 156 of its 434 icons are PNG; dropping them leaves pages bare). The author fills each slot with a library icon whose meaning fits, or
 deletes it; page_metrics.py flags slots left over and the checker rejects the unknown icon.
 Removed:
 - other <image> elements and the nested <svg> picture-crop wrappers around them (reference

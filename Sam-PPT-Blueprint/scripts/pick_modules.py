@@ -15,8 +15,8 @@ agent's job. --crops tiles the candidates cut from started-renders/ into one lab
 
 Scale is a gate, not a preference: a module that must be scaled outside 0.8–1.25 to fill the zone
 keeps the reference's look only at the wrong density (stretched 2x it carries a quarter of the shapes
-per area, shrunk to 0.5 its text drops below the size floor; the 2026-10 S/4 run used 31 modules
-outside the range and came out half as dense as the reference). Such modules are listed separately as
+per area, shrunk to 0.5 its text drops below the size floor; a deck built from modules outside the
+range comes out about half as dense as the reference). Such modules are listed separately as
 "缩放超出" with the fix: clone units, put two modules side by side, or resize the zone.
 --chars is the outline's character count for the zone; a module whose own text ("chars", what the
 reference fitted into it) is under 1/2.5 of that is ranked after the others and marked 容量不足 (the
